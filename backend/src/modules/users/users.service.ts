@@ -179,11 +179,21 @@ export async function deactivateUser(userId: string, actorId: string) {
 }
 
 export async function updateFcmToken(userId: string, fcmToken: string) {
-  return prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: userId },
     data: { fcmToken },
     select: safeUserSelect
   });
+
+  await recordActivityLog({
+    userId,
+    action: 'user_updated',
+    entityType: 'user',
+    entityId: userId,
+    metadata: { field: 'fcmToken' }
+  });
+
+  return user;
 }
 
 export async function getProfile(userId: string) {
@@ -191,7 +201,19 @@ export async function getProfile(userId: string) {
 }
 
 export async function updateProfile(userId: string, input: { name?: string; email?: string }) {
-  return prisma.user.update({ where: { id: userId }, data: input, select: safeUserSelect });
+  const user = await prisma.user.update({ where: { id: userId }, data: input, select: safeUserSelect });
+
+  await recordActivityLog({
+    userId,
+    action: 'user_updated',
+    entityType: 'user',
+    entityId: userId,
+    metadata: {
+      updatedFields: Object.keys(input)
+    }
+  });
+
+  return user;
 }
 export function usersService() {
   return {
