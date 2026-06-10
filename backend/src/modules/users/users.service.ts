@@ -177,6 +177,22 @@ export async function deactivateUser(userId: string, actorId: string) {
 
   return updatedUser;
 }
+
+export async function updateFcmToken(userId: string, fcmToken: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { fcmToken },
+    select: safeUserSelect
+  });
+}
+
+export async function getProfile(userId: string) {
+  return prisma.user.findUnique({ where: { id: userId }, select: safeUserSelect });
+}
+
+export async function updateProfile(userId: string, input: { name?: string; email?: string }) {
+  return prisma.user.update({ where: { id: userId }, data: input, select: safeUserSelect });
+}
 export function usersService() {
   return {
     name: 'users-service-placeholder'

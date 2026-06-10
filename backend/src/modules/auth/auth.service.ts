@@ -87,7 +87,7 @@ export async function registerUser(input: {
 
   await recordActivityLog({
     userId: user.id,
-    action: 'user_registered',
+    action: 'user_created',
     entityType: 'user',
     entityId: user.id,
     metadata: {
@@ -141,7 +141,7 @@ export async function loginUser(input: { email: string; password: string }) {
 
   await recordActivityLog({
     userId: user.id,
-    action: 'user_logged_in',
+    action: 'login',
     entityType: 'user',
     entityId: user.id,
     metadata: {
@@ -205,7 +205,7 @@ export async function logoutSession(refreshToken: string) {
 
     await recordActivityLog({
       userId: existingToken.userId,
-      action: 'user_logged_out',
+      action: 'logout',
       entityType: 'user',
       entityId: existingToken.userId,
       metadata: {}
@@ -230,9 +230,4 @@ export async function getCurrentUser(userId: string) {
   }
 
   return toSafeUser(user);
-}
-export function authService() {
-  return {
-    name: 'auth-service-placeholder'
-  };
 }

@@ -1,6 +1,11 @@
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '../src/lib/password';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! })
+});
 
 async function main() {
   await prisma.activityLog.deleteMany();
@@ -8,14 +13,15 @@ async function main() {
   await prisma.ticket.deleteMany();
   await prisma.user.deleteMany();
 
-  await prisma.user.create({
-    data: {
-      name: 'Admin User',
-      email: 'admin@deskline.local',
-      passwordHash: 'seeded-password',
-      role: 'admin',
-      department: 'General'
-    }
+  const passwordHash = await hashPassword('Password123!');
+
+  await prisma.user.createMany({
+    data: [
+      { name: 'Admin User', email: 'admin@deskline.local', passwordHash, role: 'admin', department: 'General' },
+      { name: 'Supervisor User', email: 'supervisor.it@deskline.local', passwordHash, role: 'supervisor', department: 'IT' },
+      { name: 'Agent User', email: 'agent.it@deskline.local', passwordHash, role: 'agent', department: 'IT' },
+      { name: 'Employee User', email: 'employee.it@deskline.local', passwordHash, role: 'employee', department: 'IT' }
+    ]
   });
 
   await prisma.ticket.create({
@@ -29,8 +35,8 @@ async function main() {
       employee: {
         create: {
           name: 'Seed Employee',
-          email: 'employee@deskline.local',
-          passwordHash: 'seeded-password',
+          email: 'employee.seed@deskline.local',
+          passwordHash,
           role: 'employee',
           department: 'IT'
         }

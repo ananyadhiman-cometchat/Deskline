@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -109,6 +110,12 @@ model Ticket {
   employee         User            @relation("EmployeeTickets", fields: [employeeId], references: [id])
   agent            User?           @relation("AgentTickets", fields: [agentId], references: [id])
 
+  @@index([employeeId])
+  @@index([agentId])
+  @@index([status])
+  @@index([category, status])
+  @@index([subType, status])
+
   @@map("tickets")
 }
 
@@ -122,6 +129,9 @@ model Notification {
   createdAt DateTime         @default(now()) @map("created_at")
   user      User             @relation(fields: [userId], references: [id])
 
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+
   @@map("notifications")
 }
 
@@ -134,6 +144,10 @@ model ActivityLog {
   metadata   Json
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 
   @@map("activity_logs")
 }

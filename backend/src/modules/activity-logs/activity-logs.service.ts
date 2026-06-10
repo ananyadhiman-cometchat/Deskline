@@ -24,3 +24,8 @@ export function activityLogsService() {
     name: 'activity-logs-service-placeholder'
   };
 }
+
+export async function listActivityLogs() {
+  const [data,total] = await Promise.all([prisma.activityLog.findMany({orderBy:{createdAt:'desc'}}),prisma.activityLog.count()]);
+  return { data, meta:{ total } };
+}

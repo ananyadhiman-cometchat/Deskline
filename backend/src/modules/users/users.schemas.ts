@@ -31,3 +31,7 @@ export const userListQuerySchema = z.object({
       return value;
     })
 });
+
+export const updateFcmTokenSchema = z.object({
+  fcmToken: z.string().min(1)
+});
