@@ -2,8 +2,29 @@ import { prisma } from '../../lib/prisma.js';
 import { listActivityLogs } from '../activity-logs/activity-logs.service.js';
 import { createNotificationRecord } from '../notifications/notifications.service.js';
 
-export async function activityLogsController(_req:any,res:any){res.json(await listActivityLogs());}
-export async function notificationLogsController(_req:any,res:any){const data=await prisma.notification.findMany({orderBy:{createdAt:'desc'}});res.json({data,meta:{total:data.length}});}
+export async function activityLogsController(req:any,res:any){
+res.json(await listActivityLogs({
+page:Number(req.query.page)||1,
+pageSize:Number(req.query.pageSize)||20,
+userId:req.query.userId,
+action:req.query.action,
+entityType:req.query.entityType,
+from:req.query.from,
+to:req.query.to
+}));}
+export async function notificationLogsController(req:any,res:any){
+const page=Number(req.query.page)||1;
+const pageSize=Number(req.query.pageSize)||20;
+const where={
+...(req.query.type?{type:req.query.type}:{}),
+...(req.query.isRead!==undefined?{isRead:req.query.isRead==='true'}:{}),
+...((req.query.from||req.query.to)?{createdAt:{...(req.query.from?{gte:new Date(req.query.from)}:{}),...(req.query.to?{lte:new Date(req.query.to)}:{})}}:{})
+};
+const [data,total]=await Promise.all([
+prisma.notification.findMany({where,orderBy:{createdAt:'desc'},skip:(page-1)*pageSize,take:pageSize}),
+prisma.notification.count({where})
+]);
+res.json({data,meta:{total,page,pageSize,totalPages:Math.ceil(total/pageSize)||1}});}
 export async function dashboardController(_req:any,res:any){
 const [users,tickets,notifications,userRoles,ticketStatuses,unreadNotifications]=await Promise.all([
 prisma.user.count(),

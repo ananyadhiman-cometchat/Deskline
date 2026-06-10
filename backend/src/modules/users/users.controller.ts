@@ -22,7 +22,10 @@ export async function listUsersController(request: Request, response: Response) 
   const query = parseBody(userListQuerySchema, request.query);
   const result = await listUsers(query);
 
-  response.json(result);
+  response.json({
+    data: result.items,
+    meta: result.pagination
+  });
 }
 
 export async function createUserController(request: Request, response: Response) {

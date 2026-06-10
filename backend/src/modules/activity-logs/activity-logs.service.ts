@@ -25,7 +25,18 @@ export function activityLogsService() {
   };
 }
 
-export async function listActivityLogs() {
-  const [data,total] = await Promise.all([prisma.activityLog.findMany({orderBy:{createdAt:'desc'}}),prisma.activityLog.count()]);
-  return { data, meta:{ total } };
+export async function listActivityLogs(filters?: {page?:number;pageSize?:number;userId?:string;action?:string;entityType?:string;from?:string;to?:string;}) {
+  const page=filters?.page ?? 1;
+  const pageSize=filters?.pageSize ?? 20;
+  const where:any={
+    ...(filters?.userId?{userId:filters.userId}:{}),
+    ...(filters?.action?{action:filters.action}:{}),
+    ...(filters?.entityType?{entityType:filters.entityType}:{}),
+    ...((filters?.from || filters?.to)?{createdAt:{...(filters?.from?{gte:new Date(filters.from)}:{}),...(filters?.to?{lte:new Date(filters.to)}:{})}}:{})
+  };
+  const [data,total] = await Promise.all([
+    prisma.activityLog.findMany({where,orderBy:{createdAt:'desc'},skip:(page-1)*pageSize,take:pageSize}),
+    prisma.activityLog.count({where})
+  ]);
+  return { data, meta:{ total,page,pageSize,totalPages:Math.ceil(total/pageSize)||1 } };
 }
