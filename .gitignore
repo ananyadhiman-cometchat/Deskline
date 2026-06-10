@@ -1,9 +1,1 @@
 node_modules
-.dist
-coverage
-dist
-.env
-.env.local
-.DS_Store
-.vscode/settings.json
-prisma/dev.db
