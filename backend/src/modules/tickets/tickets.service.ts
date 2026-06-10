@@ -1,5 +1,5 @@
-import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '@prisma/client';
-import type { Prisma, TicketCategory } from '@prisma/client';
+import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '../../../generated/prisma/client.js';
+import type { Prisma, TicketCategory } from '../../../generated/prisma/client.js';
 
 import { AppError } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';

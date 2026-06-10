@@ -1,5 +1,5 @@
-import { UserRole } from '@prisma/client';
-import type { Department, Prisma } from '@prisma/client';
+import { UserRole } from '../../../generated/prisma/client.js';
+import type { Department, Prisma } from '../../../generated/prisma/client.js';
 
 import { env } from '../../config/env.js';
 import { prisma } from '../../lib/prisma.js';

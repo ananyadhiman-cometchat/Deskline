@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '../../generated/prisma/client.js';
 
 import { hasPermission, type Permission } from '../config/rbac.js';
 import { prisma } from '../lib/prisma.js';

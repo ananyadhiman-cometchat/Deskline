@@ -1,4 +1,4 @@
-import { Department } from '@prisma/client';
+import { Department } from '../../../generated/prisma/client.js';
 import { z } from 'zod';
 
 export const registerSchema = z.object({
