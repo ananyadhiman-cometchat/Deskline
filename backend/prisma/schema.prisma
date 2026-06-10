@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  employee
+  agent
+  supervisor
+  admin
+}
+
+enum Department {
+  IT
+  HR
+  General
+}
+
+enum TicketCategory {
+  IT
+  HR
+  General
+}
+
+enum TicketSubType {
+  information
+  action
+  conversation
+  escalation
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  escalated
+  resolved
+  closed
+}
+
+enum NotificationType {
+  ticket_update
+  assignment
+  escalation
+  announcement
+  cometchat
+}
+
+model User {
+  id               String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  passwordHash     String           @map("password_hash")
+  role             UserRole
+  department       Department
+  isActive         Boolean          @default(true) @map("is_active")
+  lastLoginAt      DateTime?        @map("last_login_at")
+  lastFailedLoginAt DateTime?       @map("last_failed_login_at")
+  cometchatUid     String?          @map("cometchat_uid")
+  fcmToken         String?          @map("fcm_token")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  tickets          Ticket[]         @relation("EmployeeTickets")
+  assignedTickets   Ticket[]         @relation("AgentTickets")
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+  refreshTokens     RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Ticket {
+  id               String         @id @default(uuid())
+  title            String
+  description      String
+  category         TicketCategory
+  subType          TicketSubType   @map("sub_type")
+  priority         TicketPriority
+  status           TicketStatus    @default(open)
+  employeeId       String          @map("employee_id")
+  agentId          String?         @map("agent_id")
+  lastActivityAt   DateTime?       @map("last_activity_at")
+  cometchatConvoId String?         @map("cometchat_convo_id")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  employee         User            @relation("EmployeeTickets", fields: [employeeId], references: [id])
+  agent            User?           @relation("AgentTickets", fields: [agentId], references: [id])
+
+  @@map("tickets")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  metadata   Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
