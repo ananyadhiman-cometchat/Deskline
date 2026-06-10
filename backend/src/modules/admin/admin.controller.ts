@@ -1,24 +1,20 @@
 import { prisma } from '../../lib/prisma.js';
 import { listActivityLogs } from '../activity-logs/activity-logs.service.js';
 import { createNotificationRecord } from '../notifications/notifications.service.js';
+import { recordActivityLog } from '../activity-logs/activity-logs.service.js';
+import { activityLogQuerySchema, notificationLogQuerySchema } from './admin.schemas.js';
 
 export async function activityLogsController(req:any,res:any){
-res.json(await listActivityLogs({
-page:Number(req.query.page)||1,
-pageSize:Number(req.query.pageSize)||20,
-userId:req.query.userId,
-action:req.query.action,
-entityType:req.query.entityType,
-from:req.query.from,
-to:req.query.to
-}));}
+const query=activityLogQuerySchema.parse(req.query);
+res.json(await listActivityLogs(query));}
 export async function notificationLogsController(req:any,res:any){
-const page=Number(req.query.page)||1;
-const pageSize=Number(req.query.pageSize)||20;
+const query=notificationLogQuerySchema.parse(req.query);
+const page=query.page;
+const pageSize=query.pageSize;
 const where={
-...(req.query.type?{type:req.query.type}:{}),
-...(req.query.isRead!==undefined?{isRead:req.query.isRead==='true'}:{}),
-...((req.query.from||req.query.to)?{createdAt:{...(req.query.from?{gte:new Date(req.query.from)}:{}),...(req.query.to?{lte:new Date(req.query.to)}:{})}}:{})
+...(query.type?{type:query.type}:{}),
+...(query.isRead!==undefined?{isRead:query.isRead==='true'}:{}),
+...((query.from||query.to)?{createdAt:{...(query.from?{gte:new Date(query.from)}:{}),...(query.to?{lte:new Date(query.to)}:{})}}:{})
 };
 const [data,total]=await Promise.all([
 prisma.notification.findMany({where,orderBy:{createdAt:'desc'},skip:(page-1)*pageSize,take:pageSize}),
@@ -46,5 +42,12 @@ res.json({data,meta:{total:data.length}});
 export async function announcementController(req:any,res:any){
 const users=await prisma.user.findMany({where:req.body.targetRole&&req.body.targetRole!=='all'?{role:req.body.targetRole}:{}});
 for(const user of users){await createNotificationRecord({actorId:req.user.id,userId:user.id,type:'announcement',title:req.body.title,body:req.body.body});}
+await recordActivityLog({
+userId:req.user.id,
+action:'announcement_sent',
+entityType:'announcement',
+entityId:`announcement-${Date.now()}`,
+metadata:{targetRole:req.body.targetRole ?? 'all',recipientCount:users.length,title:req.body.title}
+});
 res.json({data:{recipientCount:users.length}});
 }

@@ -15,35 +15,29 @@ async function main() {
   await prisma.user.deleteMany();
 
   const passwordHash = await hashPassword('Password123!');
+  const departments=['IT','HR','General'] as const;
+  const statuses=['open','in_progress','escalated','resolved','closed'] as const;
+  const priorities=['low','medium','high'] as const;
+  const subTypes=['information','action','conversation','escalation'] as const;
 
-  await prisma.user.createMany({
-    data: [
-      { name: 'Admin User', email: 'admin@deskline.local', passwordHash, role: 'admin', department: 'General' },
-      { name: 'Supervisor User', email: 'supervisor.it@deskline.local', passwordHash, role: 'supervisor', department: 'IT' },
-      { name: 'Agent User', email: 'agent.it@deskline.local', passwordHash, role: 'agent', department: 'IT' },
-      { name: 'Employee User', email: 'employee.it@deskline.local', passwordHash, role: 'employee', department: 'IT' }
-    ]
-  });
-
-  await prisma.ticket.create({
-    data: {
-      title: 'Sample IT access issue',
-      description: 'Employee cannot access internal tool.',
-      category: 'IT',
-      subType: 'action',
-      priority: 'medium',
-      status: 'open',
-      employee: {
-        create: {
-          name: 'Seed Employee',
-          email: 'employee.seed@deskline.local',
-          passwordHash,
-          role: 'employee',
-          department: 'IT'
-        }
-      }
-    }
-  });
+  const users=[] as any[];
+  for(let i=1;i<=5;i++) users.push({name:`Admin ${i}`,email:`admin${i}@deskline.local`,passwordHash,role:'admin',department:'General'});
+  for(let i=1;i<=10;i++) users.push({name:`Supervisor ${i}`,email:`supervisor${i}@deskline.local`,passwordHash,role:'supervisor',department:departments[i%3]});
+  for(let i=1;i<=20;i++) users.push({name:`Agent ${i}`,email:`agent${i}@deskline.local`,passwordHash,role:'agent',department:departments[i%3]});
+  for(let i=1;i<=70;i++) users.push({name:`Employee ${i}`,email:`employee${i}@deskline.local`,passwordHash,role:'employee',department:departments[i%3]});
+  await prisma.user.createMany({data:users});
+  const allUsers=await prisma.user.findMany();
+  const employees=allUsers.filter(u=>u.role==='employee');
+  const agents=allUsers.filter(u=>u.role==='agent' || u.role==='supervisor');
+  for(let i=0;i<60;i++){
+    const employee=employees[i%employees.length];
+    const assigned=i<50?agents[i%agents.length]:null;
+    const ticket=await prisma.ticket.create({data:{title:`Seed Ticket ${i+1}`,description:`Generated ticket ${i+1} for testing and demos.`,category:departments[i%3],subType:subTypes[i%4],priority:priorities[i%3],status:statuses[i%5],employeeId:employee.id,agentId:assigned?.id}});
+    await prisma.activityLog.create({data:{userId:employee.id,action:'ticket_created',entityType:'ticket',entityId:ticket.id,metadata:{seed:true}}});
+    await prisma.activityLog.create({data:{userId:assigned?.id ?? employee.id,action:'status_updated',entityType:'ticket',entityId:ticket.id,metadata:{status:ticket.status}}});
+    await prisma.activityLog.create({data:{userId:employee.id,action:'notification_sent',entityType:'notification',entityId:ticket.id,metadata:{seed:true}}});
+    await prisma.notification.create({data:{userId:employee.id,type:i%4===0?'assignment':'ticket_update',title:`Ticket ${i+1}`,body:'Seed notification',isRead:i%2===0}});
+  }
 
   console.log('Seed completed');
 }

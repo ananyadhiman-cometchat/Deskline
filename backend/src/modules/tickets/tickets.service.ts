@@ -379,7 +379,7 @@ async function loadTicketDetails(ticketId: string) {
   });
 
   return {
-    ticket,
+    ...ticket,
     activityLogs
   };
 }
