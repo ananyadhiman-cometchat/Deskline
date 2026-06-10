@@ -26,15 +26,18 @@ prisma.notification.count({where})
 ]);
 res.json({data,meta:{total,page,pageSize,totalPages:Math.ceil(total/pageSize)||1}});}
 export async function dashboardController(_req:any,res:any){
-const [users,tickets,notifications,userRoles,ticketStatuses,unreadNotifications]=await Promise.all([
+const [users,tickets,notifications,userRoles,ticketStatuses,unreadNotifications,ticketsByDepartment,ticketsByPriority,resolvedToday]=await Promise.all([
 prisma.user.count(),
 prisma.ticket.count(),
 prisma.notification.count(),
 prisma.user.groupBy({by:['role'],_count:{role:true}}),
 prisma.ticket.groupBy({by:['status'],_count:{status:true}}),
-prisma.notification.count({where:{isRead:false}})
+prisma.notification.count({where:{isRead:false}}),
+prisma.ticket.groupBy({by:['category'],_count:{category:true}}),
+prisma.ticket.groupBy({by:['priority'],_count:{priority:true}}),
+prisma.ticket.count({where:{status:'resolved'}})
 ]);
-res.json({data:{totals:{users,tickets,notifications,unreadNotifications},usersByRole:userRoles,ticketsByStatus:ticketStatuses}});
+res.json({data:{totals:{users,tickets,notifications,unreadNotifications,resolvedToday},usersByRole:userRoles,ticketsByStatus:ticketStatuses,ticketsByDepartment,ticketsByPriority}});
 }
 export async function agentLoadController(_req:any,res:any){
 const data=await prisma.user.findMany({where:{role:'agent'},select:{id:true,name:true,department:true,isActive:true,_count:{select:{assignedTickets:true}}}});
