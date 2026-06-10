@@ -33,7 +33,7 @@ export async function createUserController(request: Request, response: Response)
   const payload = parseBody(createUserSchema, request.body);
   const result = await createUser({ ...payload, actorId: request.user.id });
 
-  response.status(201).json({ user: result });
+  response.status(201).json({ data: result });
 }
 
 export async function updateUserController(request: Request, response: Response) {
@@ -44,7 +44,7 @@ export async function updateUserController(request: Request, response: Response)
   const payload = parseBody(updateUserSchema, request.body);
   const result = await updateUser(request.params.id, { ...payload, actorId: request.user.id });
 
-  response.json({ user: result });
+  response.json({ data: result });
 }
 
 export async function deactivateUserController(request: Request, response: Response) {
@@ -54,7 +54,7 @@ export async function deactivateUserController(request: Request, response: Respo
 
   const result = await deactivateUser(request.params.id, request.user.id);
 
-  response.json({ user: result });
+  response.json({ data: result });
 }
 
 export async function updateFcmTokenController(request: Request, response: Response) {

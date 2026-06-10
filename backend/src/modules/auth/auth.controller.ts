@@ -67,5 +67,5 @@ export async function meController(request: Request, response: Response) {
 
   const user = await getCurrentUser(request.user.id);
 
-  response.json({ user });
+  response.json({ data: user });
 }
