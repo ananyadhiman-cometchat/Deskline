@@ -45,7 +45,7 @@ export async function updateUserController(request: Request, response: Response)
   }
 
   const payload = parseBody(updateUserSchema, request.body);
-  const result = await updateUser(request.params.id, { ...payload, actorId: request.user.id });
+  const result = await updateUser((request.params.id as string), { ...payload, actorId: request.user.id });
 
   response.json({ data: result });
 }
@@ -55,7 +55,7 @@ export async function deactivateUserController(request: Request, response: Respo
     throw new AppError('Authentication required', 401);
   }
 
-  const result = await deactivateUser(request.params.id, request.user.id);
+  const result = await deactivateUser((request.params.id as string), request.user.id);
 
   response.json({ data: result });
 }

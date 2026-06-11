@@ -12,7 +12,7 @@ const query=notificationLogQuerySchema.parse(req.query);
 const page=query.page;
 const pageSize=query.pageSize;
 const where={
-...(query.type?{type:query.type}:{}),
+...(query.type?{type:query.type as any}:{}),
 ...(query.isRead!==undefined?{isRead:query.isRead==='true'}:{}),
 ...((query.from||query.to)?{createdAt:{...(query.from?{gte:new Date(query.from)}:{}),...(query.to?{lte:new Date(query.to)}:{})}}:{})
 };

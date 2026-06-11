@@ -1,4 +1,4 @@
-import type { NotificationType, Prisma } from '../../../generated/prisma/client.js';
+import type { NotificationType, Prisma } from '@prisma/client';
 
 import { AppError } from '../../lib/errors.js';
 import { sendPushNotification } from '../../lib/firebase.js';

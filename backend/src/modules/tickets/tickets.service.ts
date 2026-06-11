@@ -1,5 +1,5 @@
-import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '../../../generated/prisma/client.js';
-import type { Prisma, TicketCategory } from '../../../generated/prisma/client.js';
+import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '@prisma/client';
+import type { Prisma, TicketCategory } from '@prisma/client';
 
 import { AppError } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
@@ -84,7 +84,7 @@ function isAssignableRole(role: UserRole) {
   return role === UserRole.agent || role === UserRole.supervisor;
 }
 
-async function findBestAssignee(role: UserRole.agent | UserRole.supervisor, category: TicketCategory) {
+async function findBestAssignee(role: 'agent' | 'supervisor', category: TicketCategory) {
   const department = categoryToDepartment[category];
 
   const candidates = await prisma.user.findMany({
@@ -172,7 +172,7 @@ async function notifyAssignment(input: {
   actorId: string;
   ticketId: string;
   recipientId: string;
-  recipientType: NotificationType.assignment | NotificationType.escalation;
+  recipientType: 'assignment' | 'escalation';
   title: string;
   body: string;
 }) {

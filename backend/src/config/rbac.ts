@@ -1,4 +1,4 @@
-import type { UserRole } from '../../generated/prisma/client.js';
+import type { UserRole } from '@prisma/client';
 
 export type Permission = 'users:manage' | 'auth:self' | 'auth:session' | 'logs:view' | 'dashboard:view' | 'announcements:send';
 

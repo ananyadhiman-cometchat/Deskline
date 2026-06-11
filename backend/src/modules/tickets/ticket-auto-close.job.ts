@@ -1,4 +1,4 @@
-import { NotificationType, TicketStatus } from '../../../generated/prisma/client.js';
+import { NotificationType, TicketStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { recordActivityLog } from '../activity-logs/activity-logs.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
