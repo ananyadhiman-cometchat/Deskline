@@ -26,9 +26,12 @@ function Toast() {
   )
 }
 
+import { useFirebaseMessaging } from './hooks/useFirebaseMessaging'
+
 function AppRoot() {
   // Global auth rehydration trigger
   useMe()
+  useFirebaseMessaging()
 
   return <RouterProvider router={router} />
 }
