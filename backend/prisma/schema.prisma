@@ -73,6 +73,7 @@ model User {
   notifications     Notification[]
   activityLogs      ActivityLog[]
   refreshTokens     RefreshToken[]
+  ticketComments    TicketComment[]
 
   @@map("users")
 }
@@ -111,6 +112,7 @@ model Ticket {
   updatedAt        DateTime       @updatedAt @map("updated_at")
   employee         User           @relation("EmployeeTickets", fields: [employeeId], references: [id])
   agent            User?          @relation("AgentTickets", fields: [agentId], references: [id])
+  comments         TicketComment[]
 
   @@index([employeeId])
   @@index([agentId])
@@ -118,6 +120,22 @@ model Ticket {
   @@index([category, status])
   @@index([subType, status])
   @@map("tickets")
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  ticketId  String   @map("ticket_id")
+  userId    String   @map("user_id")
+  body      String
+  isAi      Boolean  @default(false) @map("is_ai")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_comments")
 }
 
 model Notification {

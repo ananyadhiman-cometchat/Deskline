@@ -59,6 +59,17 @@ export interface Notification {
   createdAt: string
 }
 
+export interface TicketComment {
+  id: string
+  ticketId: string
+  userId: string
+  body: string
+  isAi: boolean
+  createdAt: string
+  updatedAt: string
+  user: Pick<User, 'id' | 'name' | 'email' | 'role'>
+}
+
 export interface ActivityLog {
   id: string
   userId: string

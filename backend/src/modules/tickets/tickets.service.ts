@@ -221,6 +221,8 @@ async function notifyDepartmentSupervisors(input: {
   );
 }
 
+import { generateTicketResponse } from '../ai/ai.service.js';
+
 async function createTicketWithRouting(input: {
   actorId: string;
   title: string;
@@ -261,6 +263,19 @@ async function createTicketWithRouting(input: {
   });
 
   if (input.subType === TicketSubType.information) {
+    // Generate actual AI response
+    const aiResponse = await generateTicketResponse(input.title, input.description);
+
+    // Save it as a comment
+    await prisma.ticketComment.create({
+      data: {
+        ticketId: ticket.id,
+        userId: input.actorId, // Assigning to actorId, though it's technically from AI
+        body: aiResponse,
+        isAi: true
+      }
+    });
+
     await appendActivityLog(input.actorId, 'ai_reply_sent', 'ticket', ticket.id, {
       category: input.category,
       reason: input.subType

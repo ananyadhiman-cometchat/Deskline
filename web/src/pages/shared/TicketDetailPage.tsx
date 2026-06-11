@@ -3,7 +3,7 @@ import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, us
 import { useAuthStore } from '@/store/authStore'
 import { TicketMetaPanel } from '@/components/tickets/TicketMetaPanel'
 import { TicketStatusTimeline } from '@/components/tickets/TicketStatusTimeline'
-import { AIReplyPanel } from '@/components/tickets/AIReplyPanel'
+import { TicketCommunicationThread } from '@/components/tickets/TicketCommunicationThread'
 import { EscalationBanner } from '@/components/tickets/EscalationBanner'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -165,31 +165,27 @@ export default function TicketDetailPage() {
             <TicketStatusTimeline currentStatus={ticket.status} />
           </Card>
 
-          {ticket.subType === 'information' && (
-            <>
-              <AIReplyPanel replyBody="This is an automated system response. Based on your 'Information' request, here are the relevant policy documents and answers...\n\n(AI Reply mocked until backend integration is complete)" />
-
-              {user?.role === 'employee' && ticket.employeeId === user.id && !ticket.agentId && ticket.status === 'open' && (
-                <Card>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="section-label">Need Human Assistance?</h3>
-                      <p className="text-sm text-[var(--color-muted)] mt-2 leading-relaxed">
-                        If the automated response did not answer your question, request support from a human agent.
-                      </p>
-                    </div>
-                    <Button
-                      variant="primary"
-                      onClick={() => humanHelpMutation.mutate()}
-                      isLoading={humanHelpMutation.isPending}
-                    >
-                      Request Human Help
-                    </Button>
-                  </div>
-                </Card>
-              )}
-            </>
+          {ticket.subType === 'information' && user?.role === 'employee' && ticket.employeeId === user.id && !ticket.agentId && ticket.status === 'open' && (
+            <Card>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="section-label">Need Human Assistance?</h3>
+                  <p className="text-sm text-[var(--color-muted)] mt-2 leading-relaxed">
+                    If the automated response did not answer your question, request support from a human agent.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => humanHelpMutation.mutate()}
+                  isLoading={humanHelpMutation.isPending}
+                >
+                  Request Human Help
+                </Button>
+              </div>
+            </Card>
           )}
+
+          <TicketCommunicationThread ticket={ticket} />
         </div>
 
         {/* Sidebar Column */}
@@ -213,6 +209,7 @@ export default function TicketDetailPage() {
         isOpen={isResolutionModalOpen} 
         onClose={() => setResolutionModalOpen(false)} 
         title="Resolution Confirmation Required"
+        maxWidth="lg"
       >
         <div className="space-y-6">
           <p className="text-[var(--color-navy)] text-sm leading-relaxed">
@@ -231,8 +228,7 @@ export default function TicketDetailPage() {
               Reject & Reopen
             </Button>
             <Button 
-              variant="primary" 
-              className="flex-1 !bg-[var(--color-status-resolved)] hover:!bg-[#059669] !border-none"
+              className="flex-1 !bg-[#10b981] hover:!bg-[#059669] !text-white !border-none !shadow-none hover:!shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all"
               onClick={() => confirmMutation.mutate(undefined, { onSuccess: () => setResolutionModalOpen(false) })}
               isLoading={confirmMutation.isPending}
               disabled={rejectMutation.isPending}

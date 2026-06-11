@@ -15,7 +15,7 @@ export function useNotifications() {
       const { data } = await api.get<ApiListResponse<Notification>>('/api/notifications')
       return data
     },
-    refetchInterval: 30_000, // poll every 30s for new notifications
+    refetchInterval: 15_000, // poll every 15s for new notifications
   })
 }
 

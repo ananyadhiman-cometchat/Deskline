@@ -13,6 +13,8 @@ import {
   updateTicketController
 } from './tickets.controller.js';
 
+import { listCommentsController, createCommentController } from '../comments/comments.controller.js';
+
 export const ticketsRouter = Router();
 
 ticketsRouter.use(authenticateRequest);
@@ -24,3 +26,7 @@ ticketsRouter.post('/:id/request-human-help', asyncHandler(requestHumanHelpContr
 ticketsRouter.post('/:id/confirm-resolution', asyncHandler(confirmResolutionController));
 ticketsRouter.post('/:id/reject-resolution', asyncHandler(rejectResolutionController));
 ticketsRouter.post('/:id/escalate', asyncHandler(escalateTicketController));
+
+// Comments
+ticketsRouter.get('/:id/comments', asyncHandler(listCommentsController));
+ticketsRouter.post('/:id/comments', asyncHandler(createCommentController));

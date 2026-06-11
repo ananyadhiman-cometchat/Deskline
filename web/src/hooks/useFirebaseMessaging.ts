@@ -4,6 +4,7 @@ import { messaging } from '../lib/firebase';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
+import { queryClient } from '../lib/queryClient';
 
 export function useFirebaseMessaging() {
   const { user, isAuthenticated } = useAuthStore();
@@ -53,6 +54,10 @@ export function useFirebaseMessaging() {
         title,
         message: body || '',
       });
+
+      // Invalidate queries so the UI updates to reflect the new state
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     });
 
     return () => {
