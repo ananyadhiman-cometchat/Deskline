@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -56,21 +55,21 @@ enum NotificationType {
 }
 
 model User {
-  id               String           @id @default(uuid())
-  name             String
-  email            String           @unique
-  passwordHash     String           @map("password_hash")
-  role             UserRole
-  department       Department
-  isActive         Boolean          @default(true) @map("is_active")
-  lastLoginAt      DateTime?        @map("last_login_at")
-  lastFailedLoginAt DateTime?       @map("last_failed_login_at")
-  cometchatUid     String?          @map("cometchat_uid")
-  fcmToken         String?          @map("fcm_token")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  tickets          Ticket[]         @relation("EmployeeTickets")
-  assignedTickets   Ticket[]         @relation("AgentTickets")
+  id                String         @id @default(uuid())
+  name              String
+  email             String         @unique
+  passwordHash      String         @map("password_hash")
+  role              UserRole
+  department        Department
+  isActive          Boolean        @default(true) @map("is_active")
+  lastLoginAt       DateTime?      @map("last_login_at")
+  lastFailedLoginAt DateTime?      @map("last_failed_login_at")
+  cometchatUid      String?        @map("cometchat_uid")
+  fcmToken          String?        @map("fcm_token")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  tickets           Ticket[]       @relation("EmployeeTickets")
+  assignedTickets   Ticket[]       @relation("AgentTickets")
   notifications     Notification[]
   activityLogs      ActivityLog[]
   refreshTokens     RefreshToken[]
@@ -98,24 +97,23 @@ model Ticket {
   title            String
   description      String
   category         TicketCategory
-  subType          TicketSubType   @map("sub_type")
+  subType          TicketSubType  @map("sub_type")
   priority         TicketPriority
-  status           TicketStatus    @default(open)
-  employeeId       String          @map("employee_id")
-  agentId          String?         @map("agent_id")
-  lastActivityAt   DateTime?       @map("last_activity_at")
-  cometchatConvoId String?         @map("cometchat_convo_id")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
-  employee         User            @relation("EmployeeTickets", fields: [employeeId], references: [id])
-  agent            User?           @relation("AgentTickets", fields: [agentId], references: [id])
+  status           TicketStatus   @default(open)
+  employeeId       String         @map("employee_id")
+  agentId          String?        @map("agent_id")
+  lastActivityAt   DateTime?      @map("last_activity_at")
+  cometchatConvoId String?        @map("cometchat_convo_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  employee         User           @relation("EmployeeTickets", fields: [employeeId], references: [id])
+  agent            User?          @relation("AgentTickets", fields: [agentId], references: [id])
 
   @@index([employeeId])
   @@index([agentId])
   @@index([status])
   @@index([category, status])
   @@index([subType, status])
-
   @@map("tickets")
 }
 
@@ -131,7 +129,6 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
-
   @@map("notifications")
 }
 
@@ -148,6 +145,5 @@ model ActivityLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
-
   @@map("activity_logs")
 }

@@ -71,7 +71,7 @@ export default function TicketDetailPage() {
   const handleEscalate = () => {
     escalateMutation.mutate(undefined, {
       onSuccess: () => setEscalateModalOpen(false),
-      onError: (error) => showToast(getApiErrorMessage(error))
+      onError: (error) => showToast({ type: 'error', title: 'Escalation Failed', message: getApiErrorMessage(error) })
     })
   }
 

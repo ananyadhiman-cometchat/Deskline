@@ -8,6 +8,8 @@ import type {
   CreateTicketPayload,
   UpdateTicketPayload,
 } from '@/types'
+import { useUIStore } from '@/store/uiStore'
+import { getApiErrorMessage } from '@/lib/api'
 
 // ============================================================
 // Ticket Hooks
@@ -44,6 +46,7 @@ export function useTicket(id: string) {
 
 export function useCreateTicket() {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async (payload: CreateTicketPayload) => {
@@ -51,13 +54,16 @@ export function useCreateTicket() {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'success', title: 'Ticket Created', message: 'Your ticket has been submitted.' })
       void qc.invalidateQueries({ queryKey: ['tickets'] })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Ticket Creation Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useUpdateTicket(id: string) {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async (payload: UpdateTicketPayload) => {
@@ -65,14 +71,17 @@ export function useUpdateTicket(id: string) {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'success', title: 'Ticket Updated', message: 'Changes saved successfully.' })
       void qc.invalidateQueries({ queryKey: ['tickets', id] })
       void qc.invalidateQueries({ queryKey: ['tickets'] })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Update Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useEscalateTicket(id: string) {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async () => {
@@ -80,6 +89,7 @@ export function useEscalateTicket(id: string) {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'success', title: 'Ticket Escalated', message: 'Ticket moved to supervisor queue.' })
       void qc.invalidateQueries({ queryKey: ['tickets', id] })
       void qc.invalidateQueries({ queryKey: ['tickets'] })
     },

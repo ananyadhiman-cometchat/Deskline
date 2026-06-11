@@ -16,7 +16,9 @@ export default function AgentLoadPage() {
   // we'll fetch agents and mock the ticket counts if they aren't on the User model yet, or assume they will be added.
   // Actually, standard `User` interface doesn't have `openTicketsCount`. We will display what we have or mock the counts for the UI until backend is wired.
   
-  const { data, isLoading, isError, error } = useTickets({ pageSize: 200 })
+  // Backend pagination validation appears to reject very large page sizes.
+  // Use default ticket listing instead of requesting 200 records.
+  const { data, isLoading, isError, error } = useTickets()
 
   return (
     <div className="space-y-6">

@@ -11,6 +11,8 @@ import type {
   CreateUserPayload,
   UpdateUserPayload,
 } from '@/types'
+import { useUIStore } from '@/store/uiStore'
+import { getApiErrorMessage } from '@/lib/api'
 
 // ============================================================
 // Admin Hooks
@@ -36,6 +38,7 @@ export function useUsers(filters: UserFilters = {}) {
 
 export function useCreateUser() {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async (payload: CreateUserPayload) => {
@@ -43,13 +46,16 @@ export function useCreateUser() {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'success', title: 'User Created', message: 'New user account created successfully.' })
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
+    onError: (error) => showToast({ type: 'error', title: 'User Creation Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useUpdateUser(id: string) {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async (payload: UpdateUserPayload) => {
@@ -57,13 +63,16 @@ export function useUpdateUser(id: string) {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'success', title: 'User Updated', message: 'User details updated successfully.' })
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Update Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useDeactivateUser(id: string) {
   const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async () => {
@@ -71,8 +80,10 @@ export function useDeactivateUser(id: string) {
       return data.data
     },
     onSuccess: () => {
+      showToast({ type: 'warning', title: 'User Deactivated', message: 'User account has been disabled.' })
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Deactivation Failed', message: getApiErrorMessage(error) })
   })
 }
 

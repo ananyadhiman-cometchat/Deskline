@@ -5,6 +5,8 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import type { User } from '@/types'
 import type { LoginFormValues, RegisterFormValues } from '@/lib/schemas'
 import { useNavigate } from 'react-router-dom'
+import { useUIStore } from '@/store/uiStore'
+import { getApiErrorMessage } from '@/lib/api'
 
 // ============================================================
 // Auth Hooks
@@ -35,6 +37,7 @@ export function useMe() {
 
 export function useLogin() {
   const { setAuth } = useAuthStore()
+  const showToast = useUIStore.getState().showToast
   const navigate = useNavigate()
 
   return useMutation({
@@ -51,6 +54,7 @@ export function useLogin() {
         localStorage.setItem('deskline_refresh_token', refreshToken)
       }
       setAuth(user, accessToken)
+      showToast({ type: 'success', title: 'Login Successful', message: `Welcome back ${user.name}` })
       // Role-based redirect
       const redirects: Record<string, string> = {
         employee: '/dashboard',
@@ -60,11 +64,13 @@ export function useLogin() {
       }
       navigate(redirects[user.role] ?? '/dashboard', { replace: true })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Login Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useRegister() {
   const navigate = useNavigate()
+  const showToast = useUIStore.getState().showToast
 
   return useMutation({
     mutationFn: async (payload: RegisterFormValues) => {
@@ -76,13 +82,16 @@ export function useRegister() {
       if (refreshToken) {
         localStorage.setItem('deskline_refresh_token', refreshToken)
       }
+      showToast({ type: 'success', title: 'Registration Complete', message: 'Account created successfully.' })
       navigate('/login', { replace: true, state: { registered: true } })
     },
+    onError: (error) => showToast({ type: 'error', title: 'Registration Failed', message: getApiErrorMessage(error) })
   })
 }
 
 export function useLogout() {
   const { logout } = useAuthStore()
+  const showToast = useUIStore.getState().showToast
   const navigate = useNavigate()
 
   return useMutation({
@@ -91,6 +100,7 @@ export function useLogout() {
       await api.post('/api/auth/logout', { refreshToken })
     },
     onSettled: () => {
+      showToast({ type: 'info', title: 'Logged Out', message: 'Session ended successfully.' })
       localStorage.removeItem('deskline_refresh_token')
       logout()
       queryClient.clear()
