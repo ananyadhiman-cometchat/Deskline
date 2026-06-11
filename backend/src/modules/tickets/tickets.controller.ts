@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 
 import { AppError } from '../../lib/errors.js';
 import { ticketCreateSchema, ticketListQuerySchema, ticketUpdateSchema } from './tickets.schemas.js';
-import { createTicket, escalateTicket, getTicket, listTickets, updateTicket } from './tickets.service.js';
+import { createTicket, escalateTicket, getTicket, listTickets, requestHumanHelp, updateTicket } from './tickets.service.js';
 
 function parseBody<T>(schema: { parse: (value: unknown) => T }, body: unknown) {
   try {
@@ -69,6 +69,16 @@ export async function escalateTicketController(request: Request, response: Respo
   }
 
   const ticket = await escalateTicket(request.user, request.params.id);
+
+  response.json({ data: ticket });
+}
+
+export async function requestHumanHelpController(request: Request, response: Response) {
+  if (!request.user) {
+    throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
+  }
+
+  const ticket = await requestHumanHelp(request.user, request.params.id);
 
   response.json({ data: ticket });
 }

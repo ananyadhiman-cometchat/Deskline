@@ -6,6 +6,7 @@ import {
   createTicketController,
   escalateTicketController,
   getTicketController,
+  requestHumanHelpController,
   listTicketsController,
   updateTicketController
 } from './tickets.controller.js';
@@ -17,4 +18,5 @@ ticketsRouter.post('/', asyncHandler(createTicketController));
 ticketsRouter.get('/', asyncHandler(listTicketsController));
 ticketsRouter.get('/:id', asyncHandler(getTicketController));
 ticketsRouter.patch('/:id', asyncHandler(updateTicketController));
+ticketsRouter.post('/:id/request-human-help', asyncHandler(requestHumanHelpController));
 ticketsRouter.post('/:id/escalate', asyncHandler(escalateTicketController));

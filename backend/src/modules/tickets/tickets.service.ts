@@ -81,10 +81,6 @@ function isAssignableRole(role: UserRole) {
   return role === UserRole.agent || role === UserRole.supervisor;
 }
 
-function isClosedByAdminOnly(actor: TicketActor) {
-  return actor.role === UserRole.admin;
-}
-
 async function findBestAssignee(role: UserRole.agent | UserRole.supervisor, category: TicketCategory) {
   const department = categoryToDepartment[category];
 
@@ -341,9 +337,6 @@ function assertTransitionAllowed(actor: TicketActor, currentStatus: TicketStatus
     throw new AppError('Invalid ticket status transition', 400, 'INVALID_TICKET_STATUS_TRANSITION');
   }
 
-  if (nextStatus === TicketStatus.closed && !isClosedByAdminOnly(actor)) {
-    throw new AppError('Only admins can close tickets', 403, 'FORBIDDEN');
-  }
 }
 
 async function loadTicket(ticketId: string) {
@@ -639,4 +632,49 @@ export async function updateTicket(actor: TicketActor, ticketId: string, input: 
 
 export async function escalateTicket(actor: TicketActor, ticketId: string) {
   return escalateTicketInternal(actor, ticketId);
+}
+
+export async function requestHumanHelp(actor: TicketActor, ticketId: string) {
+  if (actor.role !== UserRole.employee) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
+  const ticket = await loadTicket(ticketId);
+
+  if (ticket.employeeId !== actor.id) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
+  if (ticket.subType !== TicketSubType.information) {
+    throw new AppError('Human help can only be requested for information tickets', 400, 'INVALID_TICKET_TYPE');
+  }
+
+  const assignee = await findBestAssignee(UserRole.agent, ticket.category);
+
+  const updatedTicket = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: {
+      agentId: assignee?.id ?? null,
+      status: TicketStatus.in_progress,
+      lastActivityAt: new Date()
+    },
+    select: ticketSelect
+  });
+
+  await appendActivityLog(actor.id, 'human_help_requested', 'ticket', ticket.id, {
+    assignedAgentId: assignee?.id ?? null
+  });
+
+  if (assignee) {
+    await notifyAssignment({
+      actorId: actor.id,
+      ticketId: ticket.id,
+      recipientId: assignee.id,
+      recipientType: NotificationType.assignment,
+      title: `Human help requested: ${ticket.title}`,
+      body: `Employee requested human assistance for ticket #${ticket.id}.`
+    });
+  }
+
+  return updatedTicket;
 }
