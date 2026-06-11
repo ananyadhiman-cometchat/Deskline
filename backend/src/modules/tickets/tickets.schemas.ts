@@ -1,4 +1,4 @@
-import { TicketCategory, TicketStatus, TicketSubType } from '../../../generated/prisma/client.js';
+import { TicketCategory, TicketStatus, TicketSubType } from '@prisma/client';
 import { z } from 'zod';
 
 export const ticketCreateSchema = z.object({

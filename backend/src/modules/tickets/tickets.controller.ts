@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 
 import { AppError } from '../../lib/errors.js';
 import { ticketCreateSchema, ticketListQuerySchema, ticketUpdateSchema } from './tickets.schemas.js';
-import { createTicket, escalateTicket, getTicket, listTickets, requestHumanHelp, updateTicket } from './tickets.service.js';
+import { createTicket, escalateTicket, getTicket, listTickets, requestHumanHelp, updateTicket, confirmResolution, rejectResolution } from './tickets.service.js';
 
 function parseBody<T>(schema: { parse: (value: unknown) => T }, body: unknown) {
   try {
@@ -81,4 +81,14 @@ export async function requestHumanHelpController(request: Request, response: Res
   const ticket = await requestHumanHelp(request.user, request.params.id);
 
   response.json({ data: ticket });
+}
+
+export async function confirmResolutionController(request: Request, response: Response) {
+  if (!request.user) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
+  response.json({ data: await confirmResolution(request.user, request.params.id) });
+}
+
+export async function rejectResolutionController(request: Request, response: Response) {
+  if (!request.user) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
+  response.json({ data: await rejectResolution(request.user, request.params.id) });
 }

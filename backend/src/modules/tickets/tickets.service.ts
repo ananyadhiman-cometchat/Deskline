@@ -30,6 +30,9 @@ const ticketSelect = {
   employeeId: true,
   agentId: true,
   lastActivityAt: true,
+  resolvedAt: true,
+  resolutionConfirmationRequestedAt: true,
+  closedAt: true,
   createdAt: true,
   updatedAt: true,
   employee: {
@@ -518,6 +521,25 @@ async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
 async function updateTicketStatus(actor: TicketActor, ticketId: string, status: TicketStatus) {
   const ticket = await loadTicket(ticketId);
 
+  if (
+    ticket.status === TicketStatus.escalated &&
+    actor.role === UserRole.agent
+  ) {
+    throw new AppError(
+      'Escalated tickets can only be updated by the assigned supervisor or admin',
+      403,
+      'ESCALATED_TICKET_SUPERVISOR_REQUIRED'
+    );
+  }
+
+  if (
+    ticket.status === TicketStatus.escalated &&
+    actor.role === UserRole.supervisor &&
+    ticket.agentId !== actor.id
+  ) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
   assertTransitionAllowed(actor, ticket.status, status);
 
   if (status === TicketStatus.escalated) {
@@ -532,11 +554,18 @@ async function updateTicketStatus(actor: TicketActor, ticketId: string, status: 
     throw new AppError('Forbidden', 403, 'FORBIDDEN');
   }
 
+  const now = new Date();
   const updatedTicket = await prisma.ticket.update({
     where: { id: ticketId },
     data: {
       status,
-      lastActivityAt: new Date()
+      lastActivityAt: now,
+      ...(status === TicketStatus.resolved
+        ? {
+            resolvedAt: now,
+            resolutionConfirmationRequestedAt: now
+          }
+        : {})
     },
     select: ticketSelect
   });
@@ -552,6 +581,19 @@ async function updateTicketStatus(actor: TicketActor, ticketId: string, status: 
       oldStatus: ticket.status,
       newStatus: status,
       agentId: ticket.agentId
+    });
+
+    await createNotification(prisma, {
+      actorId: actor.id,
+      userId: ticket.employeeId,
+      type: NotificationType.ticket_update,
+      title: 'Resolution Confirmation Required',
+      body: 'Your ticket has been marked as resolved. Please confirm whether your issue has been resolved.',
+      metadata: {
+        ticketId: ticket.id,
+        resolvedAt: updatedTicket.resolvedAt,
+        resolutionConfirmationRequestedAt: updatedTicket.resolutionConfirmationRequestedAt
+      }
     });
   }
 
@@ -673,6 +715,94 @@ export async function requestHumanHelp(actor: TicketActor, ticketId: string) {
       recipientType: NotificationType.assignment,
       title: `Human help requested: ${ticket.title}`,
       body: `Employee requested human assistance for ticket #${ticket.id}.`
+    });
+  }
+
+  return updatedTicket;
+}
+
+export async function confirmResolution(actor: TicketActor, ticketId: string) {
+  const ticket = await loadTicket(ticketId);
+
+  if (actor.role !== UserRole.employee || ticket.employeeId !== actor.id) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
+  if (ticket.status !== TicketStatus.resolved) {
+    throw new AppError('Ticket must be resolved first', 409, 'INVALID_TICKET_STATE');
+  }
+
+  const updatedTicket = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: {
+      status: TicketStatus.closed,
+      lastActivityAt: new Date(),
+      closedAt: new Date()
+    },
+    select: ticketSelect
+  });
+
+  await appendActivityLog(actor.id, 'resolution_confirmed', 'ticket', ticketId, {});
+
+  await createNotification(prisma, {
+    actorId: actor.id,
+    userId: ticket.employeeId,
+    type: NotificationType.ticket_update,
+    title: 'Ticket Closed',
+    body: `Ticket #${ticket.id} has been closed after your resolution confirmation.`,
+    metadata: { ticketId: ticket.id }
+  });
+
+  if (ticket.agentId) {
+    await createNotification(prisma, {
+      actorId: actor.id,
+      userId: ticket.agentId,
+      type: NotificationType.ticket_update,
+      title: 'Resolution Accepted',
+      body: `Employee accepted the resolution for ticket #${ticket.id}.`,
+      metadata: { ticketId: ticket.id }
+    });
+  }
+
+  return updatedTicket;
+}
+
+export async function rejectResolution(actor: TicketActor, ticketId: string) {
+  const ticket = await loadTicket(ticketId);
+
+  if (actor.role !== UserRole.employee || ticket.employeeId !== actor.id) {
+    throw new AppError('Forbidden', 403, 'FORBIDDEN');
+  }
+
+  if (ticket.status !== TicketStatus.resolved) {
+    throw new AppError('Ticket must be resolved first', 409, 'INVALID_TICKET_STATE');
+  }
+
+  const updatedTicket = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: {
+      status: ticket.agentId ? TicketStatus.in_progress : TicketStatus.open,
+      lastActivityAt: new Date(),
+      resolvedAt: null,
+      resolutionConfirmationRequestedAt: null
+    },
+    select: ticketSelect
+  });
+
+  await appendActivityLog(actor.id, 'resolution_rejected', 'ticket', ticketId, {});
+  await appendActivityLog(actor.id, 'ticket_reopened', 'ticket', ticketId, {});
+
+  if (ticket.agentId) {
+    await createNotification(prisma, {
+      actorId: actor.id,
+      userId: ticket.agentId,
+      type: NotificationType.ticket_update,
+      title: 'Ticket Reopened',
+      body: `Employee rejected the resolution for ticket #${ticket.id}.`,
+      metadata: {
+        ticketId: ticket.id,
+        status: updatedTicket.status
+      }
     });
   }
 

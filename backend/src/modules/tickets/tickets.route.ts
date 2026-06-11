@@ -5,7 +5,9 @@ import { asyncHandler } from '../../lib/async-handler.js';
 import {
   createTicketController,
   escalateTicketController,
+  confirmResolutionController,
   getTicketController,
+  rejectResolutionController,
   requestHumanHelpController,
   listTicketsController,
   updateTicketController
@@ -19,4 +21,6 @@ ticketsRouter.get('/', asyncHandler(listTicketsController));
 ticketsRouter.get('/:id', asyncHandler(getTicketController));
 ticketsRouter.patch('/:id', asyncHandler(updateTicketController));
 ticketsRouter.post('/:id/request-human-help', asyncHandler(requestHumanHelpController));
+ticketsRouter.post('/:id/confirm-resolution', asyncHandler(confirmResolutionController));
+ticketsRouter.post('/:id/reject-resolution', asyncHandler(rejectResolutionController));
 ticketsRouter.post('/:id/escalate', asyncHandler(escalateTicketController));
