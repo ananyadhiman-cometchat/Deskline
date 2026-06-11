@@ -8,7 +8,14 @@ export async function listNotificationsController(request: Request, response: Re
 
   const notifications = await getUserNotifications(request.user.id);
 
-  response.json({ data: notifications, meta: { total: notifications.length } });
+  response.json({
+    data: notifications,
+    meta: {
+      total: notifications.length,
+      page: 1,
+      pageSize: notifications.length
+    }
+  });
 }
 
 export async function sendNotificationController(request: Request, response: Response) {

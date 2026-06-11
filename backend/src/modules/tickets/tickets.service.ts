@@ -1,5 +1,5 @@
-import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '@prisma/client';
-import type { Prisma, TicketCategory } from '@prisma/client';
+import { Department, NotificationType, TicketStatus, TicketSubType, UserRole } from '../../../generated/prisma/client.js';
+import type { Prisma, TicketCategory } from '../../../generated/prisma/client.js';
 
 import { AppError } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
@@ -84,7 +84,7 @@ function isAssignableRole(role: UserRole) {
   return role === UserRole.agent || role === UserRole.supervisor;
 }
 
-async function findBestAssignee(role: 'agent' | 'supervisor', category: TicketCategory) {
+async function findBestAssignee(role: UserRole.agent | UserRole.supervisor, category: TicketCategory) {
   const department = categoryToDepartment[category];
 
   const candidates = await prisma.user.findMany({
@@ -172,7 +172,7 @@ async function notifyAssignment(input: {
   actorId: string;
   ticketId: string;
   recipientId: string;
-  recipientType: 'assignment' | 'escalation';
+  recipientType: NotificationType.assignment | NotificationType.escalation;
   title: string;
   body: string;
 }) {
@@ -407,6 +407,10 @@ async function updateTicketAssignee(actor: TicketActor, ticketId: string, agentI
 
   const ticket = await loadTicket(ticketId);
 
+  if (ticket.agentId === agentId) {
+    return ticket;
+  }
+
   const assignee = await prisma.user.findUnique({
     where: { id: agentId },
     select: {
@@ -457,6 +461,10 @@ async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
   }
 
   const ticket = await loadTicket(ticketId);
+
+  if (ticket.status === TicketStatus.escalated) {
+    return ticket;
+  }
 
   if (ticket.status === TicketStatus.closed || ticket.status === TicketStatus.resolved) {
     throw new AppError('Ticket cannot be escalated from its current state', 409, 'TICKET_NOT_ESCALATABLE');
@@ -520,6 +528,10 @@ async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
 
 async function updateTicketStatus(actor: TicketActor, ticketId: string, status: TicketStatus) {
   const ticket = await loadTicket(ticketId);
+
+  if (ticket.status === status) {
+    return ticket;
+  }
 
   if (
     ticket.status === TicketStatus.escalated &&
@@ -665,11 +677,17 @@ export async function getTicket(actor: TicketActor, ticketId: string) {
 }
 
 export async function updateTicket(actor: TicketActor, ticketId: string, input: TicketUpdateInput) {
-  if (input.agentId) {
-    return updateTicketAssignee(actor, ticketId, input.agentId);
+  let ticket = await loadTicket(ticketId);
+
+  if (input.agentId && input.agentId !== ticket.agentId) {
+    ticket = await updateTicketAssignee(actor, ticketId, input.agentId);
   }
 
-  return updateTicketStatus(actor, ticketId, input.status);
+  if (input.status && input.status !== ticket.status) {
+    ticket = await updateTicketStatus(actor, ticketId, input.status);
+  }
+
+  return ticket;
 }
 
 export async function escalateTicket(actor: TicketActor, ticketId: string) {

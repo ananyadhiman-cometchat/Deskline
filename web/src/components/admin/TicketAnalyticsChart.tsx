@@ -2,15 +2,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { Card } from '@/components/ui/Card'
 import { PieChart as PieChartIcon } from 'lucide-react'
 
-// Mock data representing ticket subtypes breakdown
-const data = [
-  { name: 'Information', value: 45, color: '#3b82f6' }, // Blue
-  { name: 'Action', value: 30, color: '#10b981' }, // Emerald
-  { name: 'Conversation', value: 15, color: '#6366f1' }, // Indigo
-  { name: 'Escalation', value: 10, color: '#ef4444' }, // Red
-]
-
-export function TicketAnalyticsChart() {
+export function TicketAnalyticsChart({ data }: { data: Array<{ name: string; value: number; color: string }> }) {
   return (
     <Card className="h-full flex flex-col p-6">
       <div className="flex items-center gap-2 section-label mb-6">

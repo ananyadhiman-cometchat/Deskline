@@ -1,13 +1,14 @@
 import { StatsCard } from '@/components/admin/StatsCard'
 import { TicketAnalyticsChart } from '@/components/admin/TicketAnalyticsChart'
 import { ActivityLogTable } from '@/components/admin/ActivityLogTable'
-import { useActivityLogs } from '@/hooks/useAdmin'
+import { useActivityLogs, useAdminDashboard } from '@/hooks/useAdmin'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { Button } from '@/components/ui/Button'
 import { useNavigate } from 'react-router-dom'
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
+  const { data: dashboard } = useAdminDashboard()
   
   // Fetch a quick snapshot of recent logs for the dashboard
   const { data: logsData, isLoading: logsLoading } = useActivityLogs({ pageSize: 5 })
@@ -21,10 +22,10 @@ export default function AdminDashboardPage() {
 
       {/* High-level stats row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard label="Total Users" value="105" />
-        <StatsCard label="Active Tickets" value="42" accent />
-        <StatsCard label="Escalations" value="7" accent />
-        <StatsCard label="Avg Resolution" value="4.2h" />
+        <StatsCard label="Total Users" value={dashboard?.totals.users ?? 0} />
+        <StatsCard label="Total Tickets" value={dashboard?.totals.tickets ?? 0} accent />
+        <StatsCard label="Unread Notifications" value={dashboard?.totals.unreadNotifications ?? 0} accent />
+        <StatsCard label="Resolved Today" value={dashboard?.totals.resolvedToday ?? 0} />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -52,7 +53,13 @@ export default function AdminDashboardPage() {
           </div>
           
 
-          <TicketAnalyticsChart />
+          <TicketAnalyticsChart
+            data={(dashboard?.ticketsByStatus ?? []).map((item, index) => ({
+              name: item.status ?? 'Unknown',
+              value: Object.values(item._count)[0] ?? 0,
+              color: ['#3b82f6', '#10b981', '#6366f1', '#ef4444', '#f59e0b'][index % 5],
+            }))}
+          />
         </div>
       </div>
     </div>

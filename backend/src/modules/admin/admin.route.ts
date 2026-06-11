@@ -10,7 +10,7 @@ adminRouter.use(authenticateRequest);
 adminRouter.get('/activity-logs',requirePermission('logs:view'),asyncHandler(activityLogsController));
 adminRouter.get('/notification-logs',requirePermission('logs:view'),asyncHandler(notificationLogsController));
 adminRouter.get('/dashboard',requirePermission('dashboard:view'),asyncHandler(dashboardController));
-adminRouter.get('/agent-load',requirePermission('dashboard:view'),asyncHandler(agentLoadController));
+adminRouter.get('/agent-load',requireRole('supervisor','admin'),asyncHandler(agentLoadController));
 adminRouter.post('/announcements',requirePermission('announcements:send'),asyncHandler(announcementController));
 adminRouter.get('/supervisor/escalations',requireRole('supervisor','admin'),asyncHandler(escalationQueueController));
 adminRouter.get('/supervisor/dashboard',requireRole('supervisor','admin'),asyncHandler(supervisorDashboardController));

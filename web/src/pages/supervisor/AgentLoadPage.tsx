@@ -1,4 +1,4 @@
-import { useTickets } from '@/hooks/useTickets'
+import { useAgentLoad } from '@/hooks/useAdmin'
 import { Card } from '@/components/ui/Card'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -18,7 +18,7 @@ export default function AgentLoadPage() {
   
   // Backend pagination validation appears to reject very large page sizes.
   // Use default ticket listing instead of requesting 200 records.
-  const { data, isLoading, isError, error } = useTickets()
+  const { data, isLoading, isError, error } = useAgentLoad()
 
   return (
     <div className="space-y-6">
@@ -52,14 +52,7 @@ export default function AgentLoadPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.values((data?.data || []).reduce((acc: any, ticket: any) => {
-                  if (!ticket.agent) return acc
-                  const existing = acc[ticket.agent.id] || { ...ticket.agent, open: 0, resolved: 0 }
-                  if (['open', 'in_progress', 'escalated'].includes(ticket.status)) existing.open++
-                  if (['resolved', 'closed'].includes(ticket.status)) existing.resolved++
-                  acc[ticket.agent.id] = existing
-                  return acc
-                }, {})).map((agent: any) => (
+                {(data?.data || []).map((agent: any) => (
                   <tr key={agent.id}>
                     <td className="font-semibold text-[var(--color-navy)]">{agent.name}</td>
                     <td>{agent.department}</td>
@@ -72,10 +65,10 @@ export default function AgentLoadPage() {
                     </td>
                     <td className="text-center font-mono font-bold text-[var(--color-brand-red)]">
                       {/* Placeholder until backend provides these counts */}
-                      {agent.open}
+                      {agent._count?.assignedTickets ?? 0}
                     </td>
                     <td className="text-center font-mono text-[var(--color-muted)]">
-                      {agent.resolved}
+                      -
                     </td>
                   </tr>
                 ))}

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { Pagination } from '@/components/ui/Pagination'
 import { useNavigate } from 'react-router-dom'
+import { useSupervisorEscalations } from '@/hooks/useAdmin'
 import type { TicketFilters as Filters } from '@/types'
 import { ListOrdered } from 'lucide-react'
 
@@ -34,13 +35,13 @@ export default function AllTicketsPage() {
     : filters
 
   const { data, isLoading, isError, error } = useTickets(currentFilters)
+  const { data: escalationData } = useSupervisorEscalations()
 
   // Quick local filter for escalation tab to ensure we only show open/escalated 
   // if backend doesn't do the strict OR logic.
-  const displayTickets = data?.data.filter(t => 
-    activeTab === 'all' || 
-    (t.subType === 'escalation' && ['open', 'in_progress', 'escalated'].includes(t.status))
-  )
+  const displayTickets = activeTab === 'escalation'
+    ? escalationData?.data ?? []
+    : data?.data.filter(t => activeTab === 'all')
 
   return (
     <div className="space-y-6">

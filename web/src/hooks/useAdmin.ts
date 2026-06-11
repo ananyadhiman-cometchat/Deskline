@@ -10,6 +10,9 @@ import type {
   ActivityLogFilters,
   CreateUserPayload,
   UpdateUserPayload,
+  AdminDashboardData,
+  SupervisorDashboardData,
+  AgentMetricsData,
 } from '@/types'
 import { useUIStore } from '@/store/uiStore'
 import { getApiErrorMessage } from '@/lib/api'
@@ -120,6 +123,56 @@ export function useNotificationLogs(filters: { page?: number; pageSize?: number 
 
       const { data } = await api.get<ApiListResponse<Notification>>(`/api/admin/notification-logs?${params}`)
       return data
+    },
+  })
+}
+
+export function useAdminDashboard() {
+  return useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: async (): Promise<AdminDashboardData> => {
+      const { data } = await api.get<{ data: AdminDashboardData }>('/api/admin/dashboard')
+      return data.data
+    },
+  })
+}
+
+export function useAgentLoad() {
+  return useQuery({
+    queryKey: ['admin', 'agent-load'],
+    queryFn: async () => {
+      const { data } = await api.get('/api/admin/agent-load')
+      return data
+    },
+  })
+}
+
+export function useSupervisorEscalations() {
+  return useQuery({
+    queryKey: ['supervisor', 'escalations'],
+    queryFn: async () => {
+      const { data } = await api.get('/api/admin/supervisor/escalations')
+      return data
+    },
+  })
+}
+
+export function useSupervisorDashboard() {
+  return useQuery({
+    queryKey: ['supervisor', 'dashboard'],
+    queryFn: async (): Promise<SupervisorDashboardData> => {
+      const { data } = await api.get<{ data: SupervisorDashboardData }>('/api/admin/supervisor/dashboard')
+      return data.data
+    },
+  })
+}
+
+export function useAgentMetrics() {
+  return useQuery({
+    queryKey: ['agent', 'metrics'],
+    queryFn: async (): Promise<AgentMetricsData> => {
+      const { data } = await api.get<{ data: AgentMetricsData }>('/api/admin/agent/metrics')
+      return data.data
     },
   })
 }

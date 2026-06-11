@@ -95,3 +95,57 @@ export function useEscalateTicket(id: string) {
     },
   })
 }
+
+export function useRequestHumanHelp(id: string) {
+  const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSingleResponse<Ticket>>(`/api/tickets/${id}/request-human-help`)
+      return data.data
+    },
+    onSuccess: () => {
+      showToast({ type: 'success', title: 'Human Help Requested', message: 'The ticket has been routed for human assistance.' })
+      void qc.invalidateQueries({ queryKey: ['tickets', id] })
+      void qc.invalidateQueries({ queryKey: ['tickets'] })
+    },
+    onError: (error) => showToast({ type: 'error', title: 'Request Failed', message: getApiErrorMessage(error) })
+  })
+}
+
+export function useConfirmResolution(id: string) {
+  const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSingleResponse<Ticket>>(`/api/tickets/${id}/confirm-resolution`)
+      return data.data
+    },
+    onSuccess: () => {
+      showToast({ type: 'success', title: 'Resolution Confirmed', message: 'The ticket has been closed successfully.' })
+      void qc.invalidateQueries({ queryKey: ['tickets', id] })
+      void qc.invalidateQueries({ queryKey: ['tickets'] })
+    },
+    onError: (error) => showToast({ type: 'error', title: 'Confirmation Failed', message: getApiErrorMessage(error) })
+  })
+}
+
+export function useRejectResolution(id: string) {
+  const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSingleResponse<Ticket>>(`/api/tickets/${id}/reject-resolution`)
+      return data.data
+    },
+    onSuccess: () => {
+      showToast({ type: 'warning', title: 'Resolution Rejected', message: 'The ticket has been reopened for further work.' })
+      void qc.invalidateQueries({ queryKey: ['tickets', id] })
+      void qc.invalidateQueries({ queryKey: ['tickets'] })
+    },
+    onError: (error) => showToast({ type: 'error', title: 'Rejection Failed', message: getApiErrorMessage(error) })
+  })
+}

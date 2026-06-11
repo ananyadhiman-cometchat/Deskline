@@ -38,6 +38,10 @@ export interface Ticket {
   employeeId: string
   agentId?: string | null
   lastActivityAt?: string | null
+  resolvedAt?: string | null
+  resolutionConfirmationRequestedAt?: string | null
+  closedAt?: string | null
+  cometchatConvoId?: string | null
   createdAt: string
   updatedAt: string
   // Expanded relations (may be present on detail response)
@@ -94,19 +98,19 @@ export interface ApiError {
 
 export interface AuthTokens {
   accessToken: string
+  refreshToken: string
 }
 
 export interface LoginResponse {
-  data: {
-    accessToken: string
-    user: User
-  }
+  user: User
+  accessToken: string
+  refreshToken: string
 }
 
 export interface RegisterResponse {
-  data: {
-    user: User
-  }
+  user: User
+  accessToken: string
+  refreshToken: string
 }
 
 // --- Ticket Mutations ---
@@ -171,6 +175,44 @@ export interface ActivityLogFilters {
   to?: string
   page?: number
   pageSize?: number
+}
+
+export interface DashboardGroupCount {
+  role?: string
+  status?: string
+  category?: string
+  priority?: string
+  _count: Record<string, number>
+}
+
+export interface AdminDashboardData {
+  totals: {
+    users: number
+    tickets: number
+    notifications: number
+    unreadNotifications: number
+    resolvedToday: number
+  }
+  usersByRole: DashboardGroupCount[]
+  ticketsByStatus: DashboardGroupCount[]
+  ticketsByDepartment: DashboardGroupCount[]
+  ticketsByPriority: DashboardGroupCount[]
+ }
+
+export interface SupervisorDashboardData {
+  openEscalations: number
+  unassignedTickets: number
+  resolvedToday: number
+  agents: number
+  department: string
+}
+
+export interface AgentMetricsData {
+  assigned: number
+  resolved: number
+  escalated: number
+  inProgress: number
+  resolutionRate: number
 }
 
 // --- Valid status transitions map ---

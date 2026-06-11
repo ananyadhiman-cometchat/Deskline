@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useTicket, useUpdateTicket, useEscalateTicket } from '@/hooks/useTickets'
+import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, useRejectResolution } from '@/hooks/useTickets'
 import { useAuthStore } from '@/store/authStore'
 import { TicketMetaPanel } from '@/components/tickets/TicketMetaPanel'
 import { TicketStatusTimeline } from '@/components/tickets/TicketStatusTimeline'
@@ -11,10 +11,11 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useState } from 'react'
+import { Modal } from '@/components/ui/Modal'
+import { useState, useEffect } from 'react'
 import { getApiErrorMessage } from '@/lib/api'
 import { useUIStore } from '@/store/uiStore'
-import { ArrowLeft, FileText, GitBranch } from 'lucide-react'
+import { ArrowLeft, FileText, GitBranch, CheckCircle2, XCircle } from 'lucide-react'
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -23,10 +24,19 @@ export default function TicketDetailPage() {
   const { data: ticket, isLoading, isError, error } = useTicket(id!)
   const updateMutation = useUpdateTicket(id!)
   const escalateMutation = useEscalateTicket(id!)
+  const confirmMutation = useConfirmResolution(id!)
+  const rejectMutation = useRejectResolution(id!)
 
   const [isEscalateModalOpen, setEscalateModalOpen] = useState(false)
+  const [isResolutionModalOpen, setResolutionModalOpen] = useState(false)
   const [statusDraft, setStatusDraft] = useState<string>('')
   const showToast = useUIStore((s) => s.showToast)
+
+  useEffect(() => {
+    if (ticket && ticket.status === 'resolved' && user?.role === 'employee' && ticket.employeeId === user?.id) {
+      setResolutionModalOpen(true)
+    }
+  }, [ticket?.status, user?.role, ticket?.employeeId, user?.id])
 
   if (isError) {
     return (
@@ -89,6 +99,14 @@ export default function TicketDetailPage() {
           <h1 className="page-header mb-1">{ticket.title}</h1>
           <p className="text-[var(--color-muted)] text-sm font-mono uppercase tracking-wider mt-1">TICKET — {ticket.id.slice(0, 8).toUpperCase()}</p>
         </div>
+
+        {user?.role === 'employee' && ticket.status === 'resolved' && ticket.employeeId === user?.id && (
+          <div className="flex items-center gap-2">
+            <Button variant="primary" onClick={() => setResolutionModalOpen(true)}>
+              Review Resolution
+            </Button>
+          </div>
+        )}
 
         {canUpdateStatus && ticket.status !== 'closed' && (
           <div className="flex items-center gap-2 bg-[var(--color-surface)] p-2 border border-[var(--color-border)]">
@@ -167,6 +185,41 @@ export default function TicketDetailPage() {
         isDestructive
         isLoading={escalateMutation.isPending}
       />
+
+      <Modal 
+        isOpen={isResolutionModalOpen} 
+        onClose={() => setResolutionModalOpen(false)} 
+        title="Resolution Confirmation Required"
+      >
+        <div className="space-y-6">
+          <p className="text-[var(--color-navy)] text-sm leading-relaxed">
+            Your ticket has been marked as resolved by the assigned agent. Please review the ticket details and confirm whether your issue has been successfully resolved.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[var(--color-border)] mt-2">
+            <Button 
+              variant="ghost" 
+              className="flex-1"
+              onClick={() => rejectMutation.mutate(undefined, { onSuccess: () => setResolutionModalOpen(false) })}
+              isLoading={rejectMutation.isPending}
+              disabled={confirmMutation.isPending}
+            >
+              <XCircle size={16} className="mr-2 text-[var(--color-brand-red)]" />
+              Reject & Reopen
+            </Button>
+            <Button 
+              variant="primary" 
+              className="flex-1 !bg-[var(--color-status-resolved)] hover:!bg-[#059669] !border-none"
+              onClick={() => confirmMutation.mutate(undefined, { onSuccess: () => setResolutionModalOpen(false) })}
+              isLoading={confirmMutation.isPending}
+              disabled={rejectMutation.isPending}
+            >
+              <CheckCircle2 size={16} className="mr-2" />
+              Confirm Resolved
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

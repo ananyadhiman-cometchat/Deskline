@@ -15,8 +15,10 @@ const TicketDetailPage = lazy(() => import('@/pages/shared/TicketDetailPage'))
 const NotificationCentrePage = lazy(() => import('@/pages/shared/NotificationCentrePage'))
 const ProfilePage = lazy(() => import('@/pages/shared/ProfilePage'))
 const AgentInboxPage = lazy(() => import('@/pages/agent/InboxPage'))
+const AgentMetricsPage = lazy(() => import('@/pages/agent/AgentMetricsPage'))
 const AllTicketsPage = lazy(() => import('@/pages/supervisor/AllTicketsPage'))
 const AgentLoadPage = lazy(() => import('@/pages/supervisor/AgentLoadPage'))
+const SupervisorDashboardPage = lazy(() => import('@/pages/supervisor/SupervisorDashboardPage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const UserManagementPage = lazy(() => import('@/pages/admin/UserManagementPage'))
 const ActivityLogPage = lazy(() => import('@/pages/admin/ActivityLogPage'))
@@ -87,8 +89,20 @@ export const router = createBrowserRouter([
           </AuthGuard>
         ),
       },
+      {
+        path: '/agent/metrics',
+        element: <S><AgentMetricsPage /></S>,
+      },
 
       // Supervisor
+      {
+        path: '/supervisor/dashboard',
+        element: (
+          <AuthGuard allowedRoles={['supervisor']}>
+            <S><SupervisorDashboardPage /></S>
+          </AuthGuard>
+        ),
+      },
       {
         path: '/tickets',
         element: (

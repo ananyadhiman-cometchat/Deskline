@@ -14,7 +14,16 @@ function Toast() {
     return () => timers.forEach(clearTimeout)
   }, [toasts, removeToast])
 
-  return <div style={{position:'fixed',right:'24px',bottom:'24px',display:'flex',flexDirection:'column',gap:'12px',zIndex:9999}}>{toasts.map(t => <div key={t.id} style={{background:'#fff',minWidth:'320px',border:'1px solid #E5E7EB',borderLeft:`4px solid ${t.type==='error'?'#FF4655':t.type==='success'?'#22c55e':t.type==='warning'?'#f59e0b':'#0F1923'}`,padding:'12px'}}><div style={{fontWeight:700}}>{t.title}</div><div>{t.message}</div></div>)}</div>
+  return (
+    <div className="toast-container">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast-item toast-item-${t.type || 'info'}`}>
+          <div className="toast-title">{t.title}</div>
+          <div className="toast-message">{t.message}</div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function AppRoot() {

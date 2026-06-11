@@ -36,6 +36,8 @@ export function AppLayout() {
     { label: 'Dashboard', to: '/dashboard', icon: <Activity size={18} />, roles: ['employee'] },
     { label: 'My Tickets', to: '/tickets', icon: <Ticket size={18} />, roles: ['employee'] }, // Need to make sure /tickets lists 'own' tickets for employee
     { label: 'Inbox', to: '/inbox', icon: <Inbox size={18} />, roles: ['agent'] },
+    { label: 'My Metrics', to: '/agent/metrics', icon: <Activity size={18} />, roles: ['agent'] },
+    { label: 'Supervisor Dashboard', to: '/supervisor/dashboard', icon: <Activity size={18} />, roles: ['supervisor'] },
     { label: 'All Tickets', to: '/tickets', icon: <ListOrdered size={18} />, roles: ['supervisor', 'admin'] },
     { label: 'Agent Load', to: '/agents/load', icon: <Users size={18} />, roles: ['supervisor', 'admin'] },
     { label: 'Admin Dashboard', to: '/admin', icon: <Shield size={18} />, roles: ['admin'] },
