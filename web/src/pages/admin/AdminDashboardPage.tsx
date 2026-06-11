@@ -5,7 +5,6 @@ import { useActivityLogs } from '@/hooks/useAdmin'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { Button } from '@/components/ui/Button'
 import { useNavigate } from 'react-router-dom'
-import { ShieldAlert } from 'lucide-react'
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
@@ -52,18 +51,7 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
           
-          <div className="card bg-red-50/10 border-l-[var(--color-brand-red)] p-4">
-            <div className="flex items-start gap-3">
-              <ShieldAlert className="mt-0.5 h-5 w-5 text-[var(--color-brand-red)] shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-[var(--color-brand-red)] uppercase tracking-wide">Step 2 Pending</h3>
-                <p className="text-xs text-[var(--color-muted)] mt-1">
-                  CometChat integration and Webhook event listeners are scheduled for the next deployment phase.
-                </p>
-              </div>
-            </div>
-          </div>
-          
+
           <TicketAnalyticsChart />
         </div>
       </div>

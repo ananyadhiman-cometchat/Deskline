@@ -26,11 +26,11 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold uppercase tracking-wider text-[var(--color-navy)] font-heading">
+      <div className="mb-10 text-center">
+        <h1 className="auth-title">
           System Access
         </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
+        <p className="auth-subtitle" style={{ marginBottom: 0 }}>
           Authenticate to access the operational support matrix.
         </p>
       </div>
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
       {login.isError && <ErrorMessage error={login.error} title="Authentication Failed" />}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <Input
           label="Email Address"
           type="email"
@@ -73,7 +73,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-8 text-center text-sm text-[var(--color-muted)]">
+      <div className="auth-footer">
         Do not have an access code?{' '}
         <Link to="/register" className="font-semibold text-[var(--color-brand-red)] hover:underline">
           Request Clearance

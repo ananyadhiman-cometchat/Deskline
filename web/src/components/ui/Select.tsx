@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import { cn } from './Button'
+import { ChevronDown } from 'lucide-react'
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
@@ -45,6 +46,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-muted)]">
+            <ChevronDown size={16} />
+          </div>
         </div>
         {error && <p className="form-error-msg">{error}</p>}
       </div>

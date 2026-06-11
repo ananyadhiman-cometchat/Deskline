@@ -1,4 +1,4 @@
-import { useUsers } from '@/hooks/useAdmin'
+import { useTickets } from '@/hooks/useTickets'
 import { Card } from '@/components/ui/Card'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -16,7 +16,7 @@ export default function AgentLoadPage() {
   // we'll fetch agents and mock the ticket counts if they aren't on the User model yet, or assume they will be added.
   // Actually, standard `User` interface doesn't have `openTicketsCount`. We will display what we have or mock the counts for the UI until backend is wired.
   
-  const { data, isLoading, isError, error } = useUsers({ role: 'agent', pageSize: 50 })
+  const { data, isLoading, isError, error } = useTickets({ pageSize: 200 })
 
   return (
     <div className="space-y-6">
@@ -50,12 +50,19 @@ export default function AgentLoadPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((agent) => (
+                {Object.values((data?.data || []).reduce((acc: any, ticket: any) => {
+                  if (!ticket.agent) return acc
+                  const existing = acc[ticket.agent.id] || { ...ticket.agent, open: 0, resolved: 0 }
+                  if (['open', 'in_progress', 'escalated'].includes(ticket.status)) existing.open++
+                  if (['resolved', 'closed'].includes(ticket.status)) existing.resolved++
+                  acc[ticket.agent.id] = existing
+                  return acc
+                }, {})).map((agent: any) => (
                   <tr key={agent.id}>
                     <td className="font-semibold text-[var(--color-navy)]">{agent.name}</td>
                     <td>{agent.department}</td>
                     <td>
-                      {agent.isActive ? (
+                      {true ? (
                         <Badge variant="open">Active</Badge>
                       ) : (
                         <Badge variant="closed">Offline</Badge>
@@ -63,10 +70,10 @@ export default function AgentLoadPage() {
                     </td>
                     <td className="text-center font-mono font-bold text-[var(--color-brand-red)]">
                       {/* Placeholder until backend provides these counts */}
-                      {(agent as any).openCount ?? Math.floor(Math.random() * 5)}
+                      {agent.open}
                     </td>
                     <td className="text-center font-mono text-[var(--color-muted)]">
-                      {(agent as any).resolvedCount ?? Math.floor(Math.random() * 50)}
+                      {agent.resolved}
                     </td>
                   </tr>
                 ))}

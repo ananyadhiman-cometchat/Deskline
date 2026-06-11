@@ -1,8 +1,9 @@
+import { useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { useUnreadCount } from '@/hooks/useNotifications'
-import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield } from 'lucide-react'
+import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon } from 'lucide-react'
 import type { UserRole } from '@/types'
 
 // ============================================================
@@ -11,9 +12,17 @@ import type { UserRole } from '@/types'
 
 export function AppLayout() {
   const { user, logout } = useAuthStore()
-  const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore()
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, theme, toggleTheme } = useUIStore()
   const unreadCount = useUnreadCount()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
 
   if (!user) return null // Should be caught by AuthGuard
 
@@ -67,20 +76,7 @@ export function AppLayout() {
             </NavLink>
           ))}
 
-          {/* Placeholder for Step 2 */}
-          {user.role === 'admin' && (
-            <>
-              <div className="sidebar-section-label" style={{ marginTop: 16 }}>Step 2 Features</div>
-              <div className="sidebar-item-disabled" title="Coming soon in Step 2">
-                <Shield size={18} />
-                Moderation Queue
-              </div>
-              <div className="sidebar-item-disabled" title="Coming soon in Step 2">
-                <Activity size={18} />
-                Webhook Events
-              </div>
-            </>
-          )}
+
         </nav>
       </aside>
 
@@ -101,6 +97,15 @@ export function AppLayout() {
           </div>
 
           <div className="topbar-actions">
+            <button 
+              className="btn btn-ghost btn-sm" 
+              onClick={toggleTheme}
+              style={{ padding: '0 8px', border: 'none' }}
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             <button 
               className="notification-bell"
               onClick={() => navigate('/notifications')}

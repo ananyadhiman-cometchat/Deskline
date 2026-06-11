@@ -50,7 +50,7 @@ export default function ProfilePage() {
       <Card>
         <div className="mb-6 flex items-center justify-between border-b border-[var(--color-border)] pb-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center bg-[var(--color-navy)] font-heading text-2xl text-white">
+            <div className="flex h-16 w-16 items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)] font-heading text-2xl text-[var(--color-navy)]">
               {user.name.slice(0, 2).toUpperCase()}
             </div>
             <div>

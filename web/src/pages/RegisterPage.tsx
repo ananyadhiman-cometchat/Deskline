@@ -25,18 +25,18 @@ export default function RegisterPage() {
 
   return (
     <>
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold uppercase tracking-wider text-[var(--color-navy)] font-heading">
+      <div className="mb-10 text-center">
+        <h1 className="auth-title">
           Request Clearance
         </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
+        <p className="auth-subtitle" style={{ marginBottom: 0 }}>
           Register for standard employee access.
         </p>
       </div>
 
       {registerMutation.isError && <ErrorMessage error={registerMutation.error} title="Registration Failed" />}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <Input
           label="Full Name"
           type="text"
@@ -88,7 +88,7 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <div className="mt-8 text-center text-sm text-[var(--color-muted)]">
+      <div className="auth-footer">
         Already have clearance?{' '}
         <Link to="/login" className="font-semibold text-[var(--color-brand-red)] hover:underline">
           Log In

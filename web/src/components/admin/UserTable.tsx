@@ -41,7 +41,7 @@ export function UserTable({ users, onEdit, onDeactivate }: UserTableProps) {
                     <Edit2 size={14} />
                   </Button>
                   {user.isActive && (
-                    <Button variant="ghost" size="sm" onClick={() => onDeactivate(user)} aria-label="Deactivate user" className="text-[var(--color-brand-red)] hover:bg-red-50 hover:text-[var(--color-brand-red)]">
+                    <Button variant="ghost" size="sm" onClick={() => onDeactivate(user)} aria-label="Deactivate user" className="text-[var(--color-brand-red)] hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-[var(--color-brand-red)]">
                       <ShieldOff size={14} />
                     </Button>
                   )}

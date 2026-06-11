@@ -38,7 +38,7 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
               <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            <div className="flex items-center justify-center border border-l-0 border-r-0 border-[var(--color-border)] bg-white px-4 text-sm font-semibold text-[var(--color-navy)]">
+            <div className="flex items-center justify-center border border-l-0 border-r-0 border-[var(--color-border)] bg-[var(--theme-surface)] px-4 text-sm font-semibold text-[var(--color-navy)]">
               {page} / {totalPages}
             </div>
 

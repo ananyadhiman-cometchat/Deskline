@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SUBTYPE_DESCRIPTIONS } from '@/types'
+import { PlusSquare, AlertTriangle, Info } from 'lucide-react'
 
 export default function RaiseTicketPage() {
   const navigate = useNavigate()
@@ -39,20 +39,36 @@ export default function RaiseTicketPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="page-header">Raise a Ticket</h1>
-        <p className="text-[var(--color-muted)]">
-          Submit a new request to the operational support matrix.
-        </p>
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-center w-12 h-12 bg-[var(--color-brand-red)]/10 border border-[var(--color-brand-red)]/20 text-[var(--color-brand-red)] rounded-sm flex-shrink-0">
+          <PlusSquare size={22} />
+        </div>
+        <div>
+          <h1 className="page-header mb-1">Raise a Ticket</h1>
+          <p className="page-subtitle mt-0">Submit a new support request.</p>
+        </div>
       </div>
 
       {createMutation.isError && (
-        <ErrorMessage error={createMutation.error} title="Failed to create ticket" />
+        <div className="mb-6">
+          <ErrorMessage error={createMutation.error} title="Failed to create ticket" />
+        </div>
       )}
 
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Form Card */}
+      <div className="border border-[var(--color-border)] bg-[var(--theme-bg)]">
+        {/* Card Header */}
+        <div className="flex items-center gap-2 px-8 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+          <Info size={16} className="text-[var(--color-muted)]" />
+          <span className="font-heading text-sm uppercase tracking-wider text-[var(--color-navy)]">
+            Ticket Information
+          </span>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit(onSubmit)} className="px-8 py-8 space-y-7">
           <Input
             label="Title"
             {...register('title')}
@@ -70,7 +86,7 @@ export default function RaiseTicketPage() {
             placeholder="Provide detailed information about your request..."
           />
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <Select
               label="Department Category"
               {...register('category')}
@@ -82,7 +98,6 @@ export default function RaiseTicketPage() {
                 { value: 'General', label: 'General' },
               ]}
             />
-
             <Select
               label="Priority"
               {...register('priority')}
@@ -96,7 +111,7 @@ export default function RaiseTicketPage() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Select
               label="Request Type"
               {...register('subType')}
@@ -111,14 +126,22 @@ export default function RaiseTicketPage() {
               placeholder="Select the type of request"
             />
             {selectedSubType && (
-              <div className="rounded border-l-2 border-[var(--color-brand-red)] bg-red-50/10 p-3 text-sm text-[var(--color-muted)]">
-                <span className="font-semibold text-[var(--color-brand-red)] uppercase tracking-wide text-xs mb-1 block">Routing Info</span>
-                {SUBTYPE_DESCRIPTIONS[selectedSubType as keyof typeof SUBTYPE_DESCRIPTIONS]}
+              <div className="flex items-start gap-3 p-4 border-l-4 border-[var(--color-brand-red)] bg-red-50/50 dark:bg-red-950/30">
+                <AlertTriangle size={18} className="text-[var(--color-brand-red)] mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="block text-xs font-bold text-[var(--color-brand-red)] uppercase tracking-widest mb-1">
+                    Routing Info
+                  </span>
+                  <p className="text-sm text-[var(--color-muted)] leading-relaxed">
+                    {SUBTYPE_DESCRIPTIONS[selectedSubType as keyof typeof SUBTYPE_DESCRIPTIONS]}
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-4 border-t border-[var(--color-border)] pt-6">
+          {/* Actions */}
+          <div className="flex justify-end gap-4 pt-6 mt-2 border-t border-[var(--color-border)]">
             <Button
               type="button"
               variant="ghost"
@@ -127,16 +150,13 @@ export default function RaiseTicketPage() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              tactical
-              isLoading={createMutation.isPending}
-            >
+            <Button type="submit" tactical isLoading={createMutation.isPending} className="gap-2">
+              <PlusSquare size={16} />
               Submit Ticket
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   )
 }

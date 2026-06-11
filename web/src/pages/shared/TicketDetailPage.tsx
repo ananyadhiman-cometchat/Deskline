@@ -4,7 +4,6 @@ import { useAuthStore } from '@/store/authStore'
 import { TicketMetaPanel } from '@/components/tickets/TicketMetaPanel'
 import { TicketStatusTimeline } from '@/components/tickets/TicketStatusTimeline'
 import { AIReplyPanel } from '@/components/tickets/AIReplyPanel'
-import { ChatPlaceholder } from '@/components/tickets/ChatPlaceholder'
 import { EscalationBanner } from '@/components/tickets/EscalationBanner'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -13,6 +12,9 @@ import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useState } from 'react'
+import { getApiErrorMessage } from '@/lib/api'
+import { useUIStore } from '@/store/uiStore'
+import { ArrowLeft, FileText, GitBranch } from 'lucide-react'
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -24,6 +26,7 @@ export default function TicketDetailPage() {
 
   const [isEscalateModalOpen, setEscalateModalOpen] = useState(false)
   const [statusDraft, setStatusDraft] = useState<string>('')
+  const showToast = useUIStore((s) => s.showToast)
 
   if (isError) {
     return (
@@ -67,22 +70,24 @@ export default function TicketDetailPage() {
 
   const handleEscalate = () => {
     escalateMutation.mutate(undefined, {
-      onSuccess: () => setEscalateModalOpen(false)
+      onSuccess: () => setEscalateModalOpen(false),
+      onError: (error) => showToast(getApiErrorMessage(error))
     })
   }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex items-center gap-4 mb-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="p-0 hover:bg-transparent text-[var(--color-muted)] hover:text-[var(--color-navy)]">
-          &larr; Back
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="p-0 hover:bg-transparent flex items-center gap-1.5 text-[var(--color-muted)] hover:text-[var(--color-navy)]">
+          <ArrowLeft size={16} />
+          Back
         </Button>
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="page-header mb-1">{ticket.title}</h1>
-          <p className="text-[var(--color-muted)] text-sm font-mono uppercase tracking-wider">TICKET ID: {ticket.id}</p>
+          <p className="text-[var(--color-muted)] text-sm font-mono uppercase tracking-wider mt-1">TICKET — {ticket.id.slice(0, 8).toUpperCase()}</p>
         </div>
 
         {canUpdateStatus && ticket.status !== 'closed' && (
@@ -104,7 +109,7 @@ export default function TicketDetailPage() {
                 Update
               </Button>
             )}
-            {ticket.status !== 'escalated' && ticket.status !== 'resolved' && (
+            {ticket.status === 'in_progress' && (
               <Button 
                 size="sm" 
                 variant="danger" 
@@ -124,24 +129,25 @@ export default function TicketDetailPage() {
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <div className="section-label mb-4">Description</div>
-            <div className="whitespace-pre-wrap text-[var(--color-navy)] text-sm leading-relaxed">
+            <div className="flex items-center gap-2 section-label">
+              <FileText size={14} />
+              Description
+            </div>
+            <div className="mt-4 text-[var(--color-navy)] text-base leading-[1.85] whitespace-pre-wrap">
               {ticket.description}
             </div>
           </Card>
 
           <Card>
-            <div className="section-label mb-6">Status Progression</div>
+            <div className="flex items-center gap-2 section-label">
+              <GitBranch size={14} />
+              Status Progression
+            </div>
             <TicketStatusTimeline currentStatus={ticket.status} />
           </Card>
 
-          {/* Conditional SubType Views */}
           {ticket.subType === 'information' && (
             <AIReplyPanel replyBody="This is an automated system response. Based on your 'Information' request, here are the relevant policy documents and answers...\n\n(AI Reply mocked until backend integration is complete)" />
-          )}
-
-          {ticket.subType === 'conversation' && (
-            <ChatPlaceholder />
           )}
         </div>
 
