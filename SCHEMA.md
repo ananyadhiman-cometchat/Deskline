@@ -67,7 +67,14 @@ Valid transitions:
 - `in_progress` → `escalated` (agent escalates)
 - `in_progress` → `resolved` (agent resolves, or `conversation.ended` webhook fires)
 - `escalated` → `resolved` (supervisor resolves)
-- `resolved` → `closed` (manual admin action or future automation — not enforced in Step 1)
+- `resolved` → `closed`
+
+Closure occurs when:
+- Employee confirms the resolution
+- System automatically closes after 24 hours without employee response
+- Admin performs an override action
+
+Closed tickets must always have previously reached `resolved`.
 
 **Enforce status transition logic in the service layer, not just the API handler.**
 
@@ -193,6 +200,12 @@ model Ticket {
 3. Within that pool, pick the agent with the lowest count of `status IN (open, in_progress)` tickets
 4. For `escalation` sub-type — skip agent pool, assign to a Supervisor in the matching department
 
+Escalation ownership rule:
+- When a ticket is escalated, ownership transfers to the assigned supervisor.
+- The original agent loses ownership.
+- The supervisor becomes responsible for future ticket updates.
+- Admin retains full override capability.
+
 ---
 
 ### `Notification`
@@ -259,6 +272,11 @@ model ActivityLog {
 | `login` | `user` | Successful login |
 | `logout` | `user` | Logout |
 | `ai_reply_sent` | `ticket` | Simulated AI auto-reply (Step 1) |
+| `human_help_requested` | `ticket` | Employee requests a human after AI response |
+| `resolution_confirmed` | `ticket` | Employee accepts resolution |
+| `resolution_rejected` | `ticket` | Employee rejects resolution |
+| `ticket_reopened` | `ticket` | Ticket returned to active handling |
+| `ticket_auto_closed` | `ticket` | System closes after timeout |
 | `cc_message_sent` | `ticket` | CometChat message logged (Step 2 webhook) |
 | `cc_convo_ended` | `ticket` | conversation.ended webhook fired (Step 2) |
 | `message_flagged` | `moderation_flag` | CometChat AI flagged a message (Step 2) |

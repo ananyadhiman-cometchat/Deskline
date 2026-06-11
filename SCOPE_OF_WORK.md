@@ -79,9 +79,25 @@ Ticket submitted
 Sub-type = Information?
       ├── Yes → AI agent responds instantly
       │             ↓
-      │         Employee marks resolved?
-      │             ├── Yes → ticket closes
-      │             └── No  → escalate to human agent
+      │      Employee satisfied?
+      │             ├── Yes → Resolved
+      │             │            ↓
+      │             │  Employee confirmation
+      │             │            ↓
+      │             │         Closed
+      │             └── No
+      │                    ↓
+      │        Request Human Help
+      │                    ↓
+      │        Assigned Human Agent
+      │                    ↓
+      │            In Progress
+      │                    ↓
+      │              Resolved
+      │                    ↓
+      │      Employee confirmation
+      │                    ↓
+      │                 Closed
       │
       └── No  → route to human agent by department + load
                         ↓
@@ -250,6 +266,7 @@ Sub-type = Information?
 | GET    | `/api/tickets`              | List tickets (filtered by role)           |
 | GET    | `/api/tickets/:id`          | Ticket detail                             |
 | PATCH  | `/api/tickets/:id`          | Update status or assignment               |
+| POST   | `/api/tickets/:id/request-human-help` | Route information ticket to a human agent |
 | POST   | `/api/tickets/:id/escalate` | Escalate ticket to Supervisor             |
 
 ### Ticket Module Plan
@@ -262,6 +279,28 @@ Sub-type = Information?
 - `GET /api/tickets/:id` returns ticket detail plus the history needed for the timeline view.
 - `PATCH /api/tickets/:id` updates status or assignment, but assignment changes are supervisor/admin only.
 - `POST /api/tickets/:id/escalate` converts the ticket into the escalation path and notifies the supervisor.
+- `POST /api/tickets/:id/request-human-help` allows an employee to move an Information ticket from AI handling into the human-agent workflow.
+
+### Ticket Resolution Confirmation
+
+- Resolved means a solution or answer has been provided.
+- Closed means the employee accepted the resolution or the system automatically closed the ticket.
+
+When a ticket enters `resolved`:
+1. The employee receives a confirmation request.
+2. The employee can confirm or reject the resolution.
+3. If confirmed, the ticket moves to `closed`.
+4. If rejected:
+      - Information tickets may request human help.
+      - Human-handled tickets return to active handling.
+5. If the employee does not respond within 24 hours, the system automatically closes the ticket.
+
+### Escalation Ownership Rule
+
+Once a ticket is escalated:
+- The original agent loses ownership.
+- The assigned supervisor becomes the active owner.
+- Future status updates are performed by the supervisor or admin.
 
 **Decision plan**
 - `information` → simulated AI reply, no agent assignment.
