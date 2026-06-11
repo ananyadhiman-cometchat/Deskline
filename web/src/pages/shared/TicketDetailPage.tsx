@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, useRejectResolution } from '@/hooks/useTickets'
+import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, useRejectResolution, useRequestHumanHelp } from '@/hooks/useTickets'
 import { useAuthStore } from '@/store/authStore'
 import { TicketMetaPanel } from '@/components/tickets/TicketMetaPanel'
 import { TicketStatusTimeline } from '@/components/tickets/TicketStatusTimeline'
@@ -26,6 +26,7 @@ export default function TicketDetailPage() {
   const escalateMutation = useEscalateTicket(id!)
   const confirmMutation = useConfirmResolution(id!)
   const rejectMutation = useRejectResolution(id!)
+  const humanHelpMutation = useRequestHumanHelp(id!)
 
   const [isEscalateModalOpen, setEscalateModalOpen] = useState(false)
   const [isResolutionModalOpen, setResolutionModalOpen] = useState(false)
@@ -165,7 +166,29 @@ export default function TicketDetailPage() {
           </Card>
 
           {ticket.subType === 'information' && (
-            <AIReplyPanel replyBody="This is an automated system response. Based on your 'Information' request, here are the relevant policy documents and answers...\n\n(AI Reply mocked until backend integration is complete)" />
+            <>
+              <AIReplyPanel replyBody="This is an automated system response. Based on your 'Information' request, here are the relevant policy documents and answers...\n\n(AI Reply mocked until backend integration is complete)" />
+
+              {user?.role === 'employee' && ticket.employeeId === user.id && !ticket.agentId && ticket.status === 'open' && (
+                <Card>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="section-label">Need Human Assistance?</h3>
+                      <p className="text-sm text-[var(--color-muted)] mt-2 leading-relaxed">
+                        If the automated response did not answer your question, request support from a human agent.
+                      </p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      onClick={() => humanHelpMutation.mutate()}
+                      isLoading={humanHelpMutation.isPending}
+                    >
+                      Request Human Help
+                    </Button>
+                  </div>
+                </Card>
+              )}
+            </>
           )}
         </div>
 

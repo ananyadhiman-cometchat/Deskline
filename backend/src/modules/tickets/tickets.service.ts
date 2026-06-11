@@ -99,7 +99,7 @@ async function findBestAssignee(role: UserRole.agent | UserRole.supervisor, cate
         select: {
           assignedTickets: {
             where: {
-              status: TicketStatus.open
+              status: { in: [TicketStatus.open, TicketStatus.in_progress] }
             }
           }
         }

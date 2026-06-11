@@ -21,10 +21,10 @@ async function main() {
   const subTypes=['information','action','conversation','escalation'] as const;
 
   const users=[] as any[];
-  for(let i=1;i<=5;i++) users.push({name:`Admin ${i}`,email:`admin${i}@deskline.local`,passwordHash,role:'admin',department:'General'});
-  for(let i=1;i<=10;i++) users.push({name:`Supervisor ${i}`,email:`supervisor${i}@deskline.local`,passwordHash,role:'supervisor',department:departments[i%3]});
-  for(let i=1;i<=20;i++) users.push({name:`Agent ${i}`,email:`agent${i}@deskline.local`,passwordHash,role:'agent',department:departments[i%3]});
-  for(let i=1;i<=70;i++) users.push({name:`Employee ${i}`,email:`employee${i}@deskline.local`,passwordHash,role:'employee',department:departments[i%3]});
+  for(let i=1;i<=5;i++) users.push({name:`Admin ${i}`,email:`admin${i}@deskline.local`,passwordHash,role:'admin',department:'General',fcmToken:`dummy-fcm-admin-${i}`});
+  for(let i=1;i<=10;i++) users.push({name:`Supervisor ${i}`,email:`supervisor${i}@deskline.local`,passwordHash,role:'supervisor',department:departments[i%3],fcmToken:`dummy-fcm-supervisor-${i}`});
+  for(let i=1;i<=20;i++) users.push({name:`Agent ${i}`,email:`agent${i}@deskline.local`,passwordHash,role:'agent',department:departments[i%3],fcmToken:`dummy-fcm-agent-${i}`});
+  for(let i=1;i<=70;i++) users.push({name:`Employee ${i}`,email:`employee${i}@deskline.local`,passwordHash,role:'employee',department:departments[i%3],fcmToken:`dummy-fcm-employee-${i}`});
   await prisma.user.createMany({data:users});
   const allUsers=await prisma.user.findMany();
   const employees=allUsers.filter(u=>u.role==='employee');
