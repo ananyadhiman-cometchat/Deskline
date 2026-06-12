@@ -62,21 +62,47 @@ const WORKFLOW_STEPS = [
     step: '01',
     title: 'TICKET INGESTED',
     desc: 'New request arrives via portal, email, or API. DeskLine classifies by type, urgency, and routing logic in under 200ms.',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4655" strokeWidth="1.5" strokeLinecap="square">
+        <rect x="3" y="3" width="18" height="18" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="9" y1="21" x2="9" y2="9" />
+      </svg>
+    ),
   },
   {
     step: '02',
     title: 'AI SCREENS',
     desc: 'The intercept layer attempts immediate resolution. FAQ-class queries close instantly. Unresolved tickets enter the agent queue with full context.',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4655" strokeWidth="1.5" strokeLinecap="square">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        <path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+      </svg>
+    ),
   },
   {
     step: '03',
     title: 'AGENT DEPLOYS',
     desc: 'The assigned agent receives the ticket with history, suggested responses, and SLA countdown. One screen. Everything they need.',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4655" strokeWidth="1.5" strokeLinecap="square">
+        <rect x="2" y="3" width="20" height="14" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    ),
   },
   {
     step: '04',
     title: 'MISSION CLOSED',
     desc: 'Resolution logged, CSAT captured, SLA recorded. Every closed ticket feeds the routing intelligence for future operations.',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4655" strokeWidth="1.5" strokeLinecap="square">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    ),
   },
 ]
 
@@ -634,10 +660,10 @@ export default function LandingPage() {
             {FEATURES.map((f) => (
               <div
                 key={f.num}
-                data-num={f.num}
                 className="lp-feature-card"
                 style={{
                   padding: '2.5rem',
+                  paddingTop: '2rem',
                   borderRight: '1px solid var(--theme-border)',
                   borderBottom: '1px solid var(--theme-border)',
                   position: 'relative',
@@ -654,25 +680,45 @@ export default function LandingPage() {
                   el.style.background = 'var(--theme-bg)'
                 }}
               >
-                {/* Ghost number */}
+                {/* Ghost watermark number */}
                 <span
                   style={{
                     position: 'absolute',
-                    top: -10,
-                    right: 16,
+                    bottom: -16,
+                    right: 20,
                     fontFamily: 'Bebas Neue, sans-serif',
-                    fontSize: 80,
+                    fontSize: 100,
                     color: 'var(--theme-text-main)',
-                    opacity: 0.05,
+                    opacity: 0.04,
                     lineHeight: 1,
                     pointerEvents: 'none',
                     userSelect: 'none',
+                    letterSpacing: '-0.04em',
                   }}
                 >
                   {f.num}
                 </span>
-                {/* Red accent bar */}
-                <div style={{ width: 3, height: 32, background: '#FF4655', marginBottom: '1.5rem' }} />
+
+                {/* Indexed number badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem' }}>
+                  <span
+                    style={{
+                      fontFamily: 'Bebas Neue, sans-serif',
+                      fontSize: 13,
+                      letterSpacing: '0.12em',
+                      color: '#FF4655',
+                      background: 'rgba(255,70,85,0.08)',
+                      border: '1px solid rgba(255,70,85,0.2)',
+                      padding: '3px 10px 2px',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {f.num}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--theme-border)' }} />
+                </div>
+
+                {/* Feature name */}
                 <div
                   style={{
                     fontSize: 14,
@@ -681,8 +727,12 @@ export default function LandingPage() {
                     textTransform: 'uppercase',
                     color: 'var(--theme-text-main)',
                     marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
                   }}
                 >
+                  <span style={{ width: 3, height: 14, background: '#FF4655', display: 'inline-block', flexShrink: 0 }} />
                   {f.name}
                 </div>
                 <p style={{ fontSize: 14, color: 'var(--theme-muted)', lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
@@ -737,6 +787,66 @@ export default function LandingPage() {
             </h2>
           </div>
 
+          {/* Visual connector row */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              marginBottom: 0,
+              borderLeft: '1px solid rgba(255,255,255,0.06)',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            {WORKFLOW_STEPS.map((s, i) => (
+              <div
+                key={`connector-${s.step}`}
+                style={{
+                  borderRight: '1px solid rgba(255,255,255,0.06)',
+                  padding: '1.25rem 2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  position: 'relative',
+                }}
+              >
+                {/* Step pill */}
+                <span
+                  style={{
+                    fontFamily: 'Bebas Neue, sans-serif',
+                    fontSize: 11,
+                    letterSpacing: '0.2em',
+                    color: '#FF4655',
+                    background: 'rgba(255,70,85,0.1)',
+                    border: '1px solid rgba(255,70,85,0.25)',
+                    padding: '3px 10px 2px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  STEP {s.step}
+                </span>
+                {/* Connector arrow */}
+                {i < WORKFLOW_STEPS.length - 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: -12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <polyline points="8,4 16,12 8,20" stroke="#FF4655" strokeWidth="1.5" strokeLinecap="square" fill="none" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step cards */}
           <div
             style={{
               display: 'grid',
@@ -753,17 +863,36 @@ export default function LandingPage() {
                   padding: '2.5rem 2rem',
                 }}
               >
+                {/* Icon */}
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    border: '1px solid rgba(255,70,85,0.2)',
+                    background: 'rgba(255,70,85,0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1.5rem',
+                  }}
+                >
+                  {s.icon}
+                </div>
+
+                {/* Big faint step number */}
                 <div
                   style={{
                     fontFamily: 'Bebas Neue, sans-serif',
                     fontSize: 56,
-                    color: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.05)',
                     lineHeight: 1,
-                    marginBottom: '1rem',
+                    marginBottom: '0.5rem',
+                    letterSpacing: '-0.02em',
                   }}
                 >
                   {s.step}
                 </div>
+
                 <div style={{ width: 24, height: 2, background: '#FF4655', marginBottom: '1rem' }} />
                 <div
                   style={{
@@ -1207,44 +1336,89 @@ export default function LandingPage() {
                   background: dark ? '#162130' : '#ffffff',
                   transition: 'border-top-color 200ms ease',
                   cursor: 'default',
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderTopColor = '#FF4655')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderTopColor = 'transparent')}
               >
-                <div style={{ color: '#FF4655', fontSize: 12, marginBottom: '1.25rem', letterSpacing: 2 }}>★★★★★</div>
+                {/* Giant decorative quote mark */}
+                <svg
+                  style={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 20,
+                    opacity: 0.06,
+                    pointerEvents: 'none',
+                  }}
+                  width="80"
+                  height="64"
+                  viewBox="0 0 80 64"
+                  fill="var(--theme-text-main)"
+                >
+                  <path d="M0 64V38.4C0 17.067 11.733 4.267 35.2 0l4.267 7.467C27.2 9.6 20.267 15.2 17.067 24H32V64H0zm48 0V38.4C48 17.067 59.733 4.267 83.2 0l4.267 7.467C75.2 9.6 68.267 15.2 65.067 24H80V64H48z" />
+                </svg>
+
+                {/* Stars */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: '1.25rem' }}>
+                  {[1,2,3,4,5].map((n) => (
+                    <svg key={n} width="12" height="12" viewBox="0 0 24 24" fill="#FF4655">
+                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+                    </svg>
+                  ))}
+                </div>
+
+                {/* Quote icon accent */}
+                <svg
+                  width="24"
+                  height="18"
+                  viewBox="0 0 24 18"
+                  fill="#FF4655"
+                  style={{ marginBottom: '1rem', opacity: 0.9 }}
+                >
+                  <path d="M0 18V11.4C0 5.1 3.5 1.275 10.5 0l1.275 2.225C8.1 2.875 6.075 4.55 5.1 7.25H9.6V18H0zm14.4 0V11.4C14.4 5.1 17.9 1.275 24.9 0l1.275 2.225C22.5 2.875 20.475 4.55 19.5 7.25H24V18H14.4z" />
+                </svg>
+
                 <p
                   style={{
                     fontSize: 14,
                     color: 'var(--theme-muted)',
                     lineHeight: 1.8,
-                    fontStyle: 'italic',
-                    marginBottom: '1.5rem',
-                    margin: '0 0 1.5rem',
+                    marginBottom: '2rem',
+                    margin: '0 0 2rem',
+                    fontStyle: 'normal',
                   }}
                 >
-                  {t.quote}
+                  {t.quote.replace(/^"|"$/g, '')}
                 </p>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'var(--theme-border)', marginBottom: '1.25rem' }} />
+
+                {/* Author */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      border: '1px solid var(--theme-border)',
-                      background: dark ? '#0F1923' : '#F7F7F7',
+                      width: 40,
+                      height: 40,
+                      border: '1px solid rgba(255,70,85,0.3)',
+                      background: 'rgba(255,70,85,0.06)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 700,
-                      color: 'var(--theme-text-main)',
+                      fontFamily: 'Bebas Neue, sans-serif',
+                      letterSpacing: '0.1em',
+                      color: '#FF4655',
                       flexShrink: 0,
                     }}
                   >
                     {t.initials}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--theme-text-main)' }}>{t.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--theme-muted)' }}>{t.role}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--theme-text-main)', letterSpacing: '0.03em' }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--theme-muted)', marginTop: 2, letterSpacing: '0.05em' }}>{t.role}</div>
                   </div>
                 </div>
               </div>
@@ -1253,101 +1427,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════
-          CTA
-      ══════════════════════════════════════════════════════ */}
-      <section
-        id="cta"
-        style={{
-          background: 'var(--theme-bg)',
-          borderTop: '1px solid var(--theme-border)',
-          position: 'relative',
-          zIndex: 1,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: '0 auto',
-            padding: '120px 3rem',
-          }}
-        >
-          <div
-            style={{
-              borderLeft: '4px solid #FF4655',
-              paddingLeft: '3rem',
-              display: 'grid',
-              gridTemplateColumns: '1fr auto',
-              alignItems: 'center',
-              gap: '3rem',
-            }}
-          >
-            {/* Left */}
-            <div>
-              <h2
-                style={{
-                  fontFamily: 'Bebas Neue, sans-serif',
-                  fontSize: 'clamp(40px, 5vw, 68px)',
-                  lineHeight: 0.95,
-                  letterSpacing: '-0.01em',
-                  textTransform: 'uppercase',
-                  color: 'var(--theme-text-main)',
-                  margin: '0 0 1rem',
-                }}
-              >
-                Ready to
-                <br />
-                <span style={{ color: '#FF4655' }}>DEPLOY?</span>
-              </h2>
-              <p style={{ fontSize: 15, color: 'var(--theme-muted)', maxWidth: 500 }}>
-                Join over 1,200 support teams operating at full capacity. Setup takes under 15 minutes. No sales call required.
-              </p>
-            </div>
 
-            {/* Right */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 220 }}>
-              <Link to="/register" className="btn btn-primary btn-tactical btn-lg" style={{ width: '100%', textAlign: 'center' }}>
-                START FREE TRIAL
-              </Link>
-              <Link
-                to="/login"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 48,
-                  padding: '0 28px',
-                  background: 'var(--theme-bg)',
-                  border: '1px solid var(--theme-border)',
-                  color: 'var(--theme-text-main)',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  textDecoration: 'none',
-                  transition: 'border-color 150ms',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#FF4655')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--theme-border)')}
-              >
-                SCHEDULE A DEMO
-              </Link>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'var(--theme-muted)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  textAlign: 'center',
-                }}
-              >
-                NO CREDIT CARD · 14-DAY TRIAL
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ══════════════════════════════════════════════════════
           FOOTER

@@ -66,13 +66,23 @@ export function TicketCommunicationThread({ ticket }: Props) {
                     <span>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
                   </div>
                   <div 
-                    className={`max-w-[85%] p-4 text-sm leading-relaxed whitespace-pre-wrap ${
-                      comment.isAi 
-                        ? 'bg-[var(--color-brand-red)] text-white' 
+                    style={{
+                      maxWidth: '85%',
+                      padding: '1rem',
+                      fontSize: '0.875rem',
+                      lineHeight: '1.625',
+                      whiteSpace: 'pre-wrap',
+                      border: '1px solid',
+                      borderColor: comment.isAi || isMine ? 'transparent' : 'var(--theme-border)',
+                      background: comment.isAi
+                        ? '#FF4655'
                         : isMine
-                          ? 'bg-[var(--color-navy)] text-white'
-                          : 'bg-white dark:bg-zinc-800 border border-[var(--color-border)] text-[var(--theme-text-main)]'
-                    }`}
+                          ? '#0F1923'
+                          : 'var(--theme-surface)',
+                      color: comment.isAi || isMine
+                        ? '#ffffff'
+                        : 'var(--theme-text-main)',
+                    }}
                   >
                     {comment.body}
                   </div>

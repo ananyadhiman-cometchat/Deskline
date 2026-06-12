@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { useLogout } from '@/hooks/useAuth'
 import { useUIStore } from '@/store/uiStore'
 import { useUnreadCount } from '@/hooks/useNotifications'
 import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon } from 'lucide-react'
@@ -26,9 +27,9 @@ export function AppLayout() {
 
   if (!user) return null // Should be caught by AuthGuard
 
+  const { mutate: logoutMutation } = useLogout()
   const handleLogout = () => {
-    logout()
-    navigate('/login')
+    logoutMutation()
   }
 
   // Define navigation based on role

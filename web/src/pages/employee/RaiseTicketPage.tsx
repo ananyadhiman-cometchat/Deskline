@@ -126,13 +126,13 @@ export default function RaiseTicketPage() {
               placeholder="Select the type of request"
             />
             {selectedSubType && (
-              <div className="flex items-start gap-3 p-4 border-l-4 border-[var(--color-brand-red)] bg-red-50/50 dark:bg-red-950/30">
+              <div className="flex items-start gap-3 p-4 border-l-4 border-[var(--color-brand-red)]" style={{ background: 'rgba(255, 70, 85, 0.08)' }}>
                 <AlertTriangle size={18} className="text-[var(--color-brand-red)] mt-0.5 flex-shrink-0" />
                 <div>
                   <span className="block text-xs font-bold text-[var(--color-brand-red)] uppercase tracking-widest mb-1">
                     Routing Info
                   </span>
-                  <p className="text-sm text-[var(--color-muted)] leading-relaxed">
+                  <p className="text-sm text-[var(--theme-text-main)] leading-relaxed">
                     {SUBTYPE_DESCRIPTIONS[selectedSubType as keyof typeof SUBTYPE_DESCRIPTIONS]}
                   </p>
                 </div>
