@@ -33,4 +33,10 @@ abstract class TicketRepository {
     required String id,
     required String agentId,
   });
+
+  Future<Ticket> confirmResolution(String id);
+
+  Future<Ticket> rejectResolution(String id);
+
+  Future<Ticket> requestHumanHelp(String id);
 }

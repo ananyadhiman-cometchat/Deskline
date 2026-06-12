@@ -13,7 +13,7 @@ class UserManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = DesklineColors.of(context);
-    final users = ref.watch(mockUsersProvider);
+    final users = ref.watch(usersProvider);
 
     return users.when(
       data: (data) => ListView(
@@ -85,74 +85,77 @@ class UserManagementScreen extends ConsumerWidget {
           const SectionHeader(title: 'ALL USERS'),
           const SizedBox(height: AppSpacing.sm),
 
-          // User list as styled cards instead of DataTable (better mobile fit)
-          ...data.map((user) => Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colors.cardBackground,
-              border: Border.all(color: colors.borderColor, width: 1),
-            ),
-            child: Row(
-              children: [
-                // Avatar
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryRed.withValues(alpha: 0.08),
-                    border: Border.all(color: AppColors.primaryRed.withValues(alpha: 0.2)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                      style: AppTypography.badge.copyWith(color: AppColors.primaryRed),
+          // User list as styled cards — tap to manage
+          ...data.map((user) => GestureDetector(
+            onTap: () => _showUserActions(context, user, colors),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: colors.cardBackground,
+                border: Border.all(color: colors.borderColor, width: 1),
+              ),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryRed.withValues(alpha: 0.08),
+                      border: Border.all(color: AppColors.primaryRed.withValues(alpha: 0.2)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                        style: AppTypography.badge.copyWith(color: AppColors.primaryRed),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                // Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.name,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(width: AppSpacing.md),
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      Text(
-                        user.email,
-                        style: AppTypography.caption.copyWith(color: colors.textMuted),
-                      ),
-                    ],
+                        Text(
+                          user.email,
+                          style: AppTypography.caption.copyWith(color: colors.textMuted),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // Role badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _roleColor(user.role.name).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(2),
+                  // Role badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _roleColor(user.role.name).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Text(
+                      user.role.name.toUpperCase(),
+                      style: AppTypography.badge.copyWith(color: _roleColor(user.role.name)),
+                    ),
                   ),
-                  child: Text(
-                    user.role.name.toUpperCase(),
-                    style: AppTypography.badge.copyWith(color: _roleColor(user.role.name)),
+                  const SizedBox(width: AppSpacing.sm),
+                  // Active indicator
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: user.isActive ? AppColors.successGreen : AppColors.errorRed,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                // Active indicator
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: user.isActive ? AppColors.successGreen : AppColors.errorRed,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           )),
         ],
@@ -179,6 +182,88 @@ class UserManagementScreen extends ConsumerWidget {
             child: Text('CLOSE', style: AppTypography.badge.copyWith(color: AppColors.primaryRed)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showUserActions(BuildContext context, dynamic user, DesklineColors colors) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name.toString().toUpperCase(),
+                      style: AppTypography.cardTitle.copyWith(color: colors.textPrimary),
+                    ),
+                    Text(
+                      user.email.toString(),
+                      style: AppTypography.caption.copyWith(color: colors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: colors.borderColor),
+              _actionTile(ctx, Icons.edit_outlined, 'EDIT USER', colors, () {
+                Navigator.pop(ctx);
+                _showDialog(context, 'Edit ${user.name}', 'Edit form ready for repository wiring.');
+              }),
+              _actionTile(ctx, Icons.swap_horiz, 'CHANGE ROLE', colors, () {
+                Navigator.pop(ctx);
+                _showDialog(context, 'Change Role', 'Role change for ${user.name} ready for repository wiring.');
+              }),
+              _actionTile(
+                ctx,
+                user.isActive ? Icons.block : Icons.check_circle_outline,
+                user.isActive ? 'DEACTIVATE' : 'REACTIVATE',
+                colors,
+                () {
+                  Navigator.pop(ctx);
+                  _showDialog(
+                    context,
+                    user.isActive ? 'Deactivate ${user.name}?' : 'Reactivate ${user.name}?',
+                    'This action will be connected to the repository.',
+                  );
+                },
+                isDestructive: user.isActive,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _actionTile(BuildContext ctx, IconData icon, String label, DesklineColors colors, VoidCallback onTap, {bool isDestructive = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: colors.borderColor, width: 1)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: isDestructive ? AppColors.errorRed : colors.textPrimary),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              label,
+              style: AppTypography.navigationLabel.copyWith(
+                color: isDestructive ? AppColors.errorRed : colors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

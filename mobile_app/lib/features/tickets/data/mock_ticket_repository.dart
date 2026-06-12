@@ -415,4 +415,19 @@ class MockTicketRepository implements TicketRepository {
     _tickets[index] = updated;
     return updated;
   }
+
+  @override
+  Future<Ticket> confirmResolution(String id) async {
+    return updateTicketStatus(id: id, status: TicketStatus.closed);
+  }
+
+  @override
+  Future<Ticket> rejectResolution(String id) async {
+    return updateTicketStatus(id: id, status: TicketStatus.inProgress);
+  }
+
+  @override
+  Future<Ticket> requestHumanHelp(String id) async {
+    return updateTicketStatus(id: id, status: TicketStatus.inProgress);
+  }
 }

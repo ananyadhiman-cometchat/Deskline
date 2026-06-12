@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/layout/app_shell.dart';
+import '../../../core/theme/color_scheme.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../shared/enums/enums.dart';
@@ -16,39 +19,88 @@ class AgentInboxScreen extends ConsumerStatefulWidget {
 }
 
 class _AgentInboxScreenState extends ConsumerState<AgentInboxScreen> {
-  TicketStatus? status;
+  TicketStatus? _statusFilter;
 
   @override
   Widget build(BuildContext context) {
+    final colors = DesklineColors.of(context);
     var tickets = ref.watch(ticketListProvider);
 
-    if (status != null) {
-      tickets = tickets.where((e) => e.status == status).toList();
+    if (_statusFilter != null) {
+      tickets = tickets.where((e) => e.status == _statusFilter).toList();
     }
 
-    return AppShell(
-      child: Column(
-        children: [
-          const SectionHeader(title: 'AGENT INBOX'),
-          DropdownButton<TicketStatus?>(
-            value: status,
-            hint: const Text('Filter Status'),
-            onChanged: (v) => setState(() => status = v),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('All')),
-              ...TicketStatus.values.map(
-                (e) => DropdownMenuItem(value: e, child: Text(e.name)),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'AGENT INBOX',
+          style: AppTypography.pageHeader.copyWith(color: colors.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '${tickets.length} tickets in queue.',
+          style: AppTypography.bodySmall.copyWith(color: colors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Filter chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterChip(null, 'All', colors),
+              const SizedBox(width: AppSpacing.xs),
+              ...TicketStatus.values.map((s) => Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.xs),
+                child: _buildFilterChip(s, s.name.toUpperCase(), colors),
+              )),
             ],
           ),
-          Expanded(
-            child: tickets.isEmpty
-                ? const EmptyState(message: 'No tickets found')
-                : ListView(
-                    children: tickets.map((e) => TicketCard(ticket: e)).toList(),
-                  ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const SectionHeader(title: 'TICKETS'),
+        const SizedBox(height: AppSpacing.sm),
+
+        Expanded(
+          child: tickets.isEmpty
+              ? const EmptyState(message: 'No tickets match your filter.', icon: Icons.inbox_outlined)
+              : ListView.separated(
+                  itemCount: tickets.length,
+                  separatorBuilder: (_, i) => const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final ticket = tickets[index];
+                    return TicketCard(
+                      ticket: ticket,
+                      onTap: () => context.go('/tickets/${ticket.id}'),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(TicketStatus? status, String label, DesklineColors colors) {
+    final isActive = _statusFilter == status;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = status),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primaryRed.withValues(alpha: 0.1) : colors.cardBackground,
+          border: Border.all(
+            color: isActive ? AppColors.primaryRed : colors.borderColor,
+            width: 1,
           ),
-        ],
+        ),
+        child: Text(
+          label,
+          style: AppTypography.badge.copyWith(
+            color: isActive ? AppColors.primaryRed : colors.textPrimary,
+          ),
+        ),
       ),
     );
   }

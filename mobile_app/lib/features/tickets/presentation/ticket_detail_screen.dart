@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../shared/enums/enums.dart';
+import '../../../shared/models/models.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/ai_response_panel.dart';
 import '../widgets/assignment_card.dart';
@@ -59,7 +60,7 @@ class TicketDetailScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '#${ticket.id.substring(0, 8).toUpperCase()}',
+          '#${ticket.id.length > 8 ? ticket.id.substring(0, 8).toUpperCase() : ticket.id.toUpperCase()}',
           style: AppTypography.ticketId.copyWith(color: colors.textMuted),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -132,17 +133,22 @@ class TicketDetailScreen extends ConsumerWidget {
             Expanded(
               child: AppButton.primary(
                 label: 'Update Status',
-                onPressed: () {
-                  logger.log('status_updated', ticketId);
-                },
+                onPressed: () => _showStatusUpdateSheet(context, ref, ticket),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: AppButton.secondary(
                 label: 'Escalate',
-                onPressed: () {
+                onPressed: () async {
+                  await ref.read(ticketRepositoryProvider).escalateTicket(ticketId);
                   logger.log('escalated', ticketId);
+                  if (context.mounted) {
+                    ref.invalidate(defaultTicketsProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Ticket escalated')),
+                    );
+                  }
                 },
               ),
             ),
@@ -150,6 +156,64 @@ class TicketDetailScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
       ],
+    );
+  }
+
+  void _showStatusUpdateSheet(BuildContext context, WidgetRef ref, Ticket ticket) {
+    final colors = DesklineColors.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.cardBackground,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(
+                  'UPDATE STATUS',
+                  style: AppTypography.sectionLabel.copyWith(color: colors.textPrimary),
+                ),
+              ),
+              Divider(height: 1, color: colors.borderColor),
+              ...TicketStatus.values
+                  .where((s) => s != ticket.status)
+                  .map((s) => _statusOption(ctx, ref, s, colors)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _statusOption(BuildContext ctx, WidgetRef ref, TicketStatus status, DesklineColors colors) {
+    return GestureDetector(
+      onTap: () async {
+        Navigator.pop(ctx);
+        await ref.read(ticketRepositoryProvider).updateTicketStatus(
+          id: ticketId,
+          status: status,
+        );
+        ref.invalidate(defaultTicketsProvider);
+        if (ctx.mounted) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(content: Text('Status updated to ${status.name}')),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: colors.borderColor, width: 1)),
+        ),
+        child: Text(
+          status.name.toUpperCase(),
+          style: AppTypography.navigationLabel.copyWith(color: colors.textPrimary),
+        ),
+      ),
     );
   }
 }

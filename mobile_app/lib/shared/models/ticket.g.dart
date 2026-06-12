@@ -19,6 +19,12 @@ _$TicketImpl _$$TicketImplFromJson(Map<String, dynamic> json) => _$TicketImpl(
   lastActivityAt: json['lastActivityAt'] == null
       ? null
       : DateTime.parse(json['lastActivityAt'] as String),
+  resolvedAt: json['resolvedAt'] == null
+      ? null
+      : DateTime.parse(json['resolvedAt'] as String),
+  closedAt: json['closedAt'] == null
+      ? null
+      : DateTime.parse(json['closedAt'] as String),
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
@@ -35,6 +41,8 @@ Map<String, dynamic> _$$TicketImplToJson(_$TicketImpl instance) =>
       'employeeId': instance.employeeId,
       'agentId': instance.agentId,
       'lastActivityAt': instance.lastActivityAt?.toIso8601String(),
+      'resolvedAt': instance.resolvedAt?.toIso8601String(),
+      'closedAt': instance.closedAt?.toIso8601String(),
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };

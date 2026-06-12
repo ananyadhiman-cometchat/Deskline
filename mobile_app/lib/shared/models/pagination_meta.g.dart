@@ -11,6 +11,7 @@ _$PaginationMetaImpl _$$PaginationMetaImplFromJson(Map<String, dynamic> json) =>
       total: (json['total'] as num).toInt(),
       page: (json['page'] as num).toInt(),
       pageSize: (json['pageSize'] as num).toInt(),
+      totalPages: (json['totalPages'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$$PaginationMetaImplToJson(
@@ -19,4 +20,5 @@ Map<String, dynamic> _$$PaginationMetaImplToJson(
   'total': instance.total,
   'page': instance.page,
   'pageSize': instance.pageSize,
+  'totalPages': instance.totalPages,
 };

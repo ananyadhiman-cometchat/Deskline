@@ -18,6 +18,8 @@ abstract class Ticket with _$Ticket {
     required String employeeId,
     String? agentId,
     DateTime? lastActivityAt,
+    DateTime? resolvedAt,
+    DateTime? closedAt,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _Ticket;

@@ -31,6 +31,8 @@ mixin _$Ticket {
   String get employeeId => throw _privateConstructorUsedError;
   String? get agentId => throw _privateConstructorUsedError;
   DateTime? get lastActivityAt => throw _privateConstructorUsedError;
+  DateTime? get resolvedAt => throw _privateConstructorUsedError;
+  DateTime? get closedAt => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
@@ -59,6 +61,8 @@ abstract class $TicketCopyWith<$Res> {
     String employeeId,
     String? agentId,
     DateTime? lastActivityAt,
+    DateTime? resolvedAt,
+    DateTime? closedAt,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -89,6 +93,8 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
     Object? employeeId = null,
     Object? agentId = freezed,
     Object? lastActivityAt = freezed,
+    Object? resolvedAt = freezed,
+    Object? closedAt = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -134,6 +140,14 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
                 ? _value.lastActivityAt
                 : lastActivityAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            resolvedAt: freezed == resolvedAt
+                ? _value.resolvedAt
+                : resolvedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            closedAt: freezed == closedAt
+                ? _value.closedAt
+                : closedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
             createdAt: null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -167,6 +181,8 @@ abstract class _$$TicketImplCopyWith<$Res> implements $TicketCopyWith<$Res> {
     String employeeId,
     String? agentId,
     DateTime? lastActivityAt,
+    DateTime? resolvedAt,
+    DateTime? closedAt,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -196,6 +212,8 @@ class __$$TicketImplCopyWithImpl<$Res>
     Object? employeeId = null,
     Object? agentId = freezed,
     Object? lastActivityAt = freezed,
+    Object? resolvedAt = freezed,
+    Object? closedAt = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -241,6 +259,14 @@ class __$$TicketImplCopyWithImpl<$Res>
             ? _value.lastActivityAt
             : lastActivityAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        resolvedAt: freezed == resolvedAt
+            ? _value.resolvedAt
+            : resolvedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        closedAt: freezed == closedAt
+            ? _value.closedAt
+            : closedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
         createdAt: null == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -268,6 +294,8 @@ class _$TicketImpl implements _Ticket {
     required this.employeeId,
     this.agentId,
     this.lastActivityAt,
+    this.resolvedAt,
+    this.closedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -296,13 +324,17 @@ class _$TicketImpl implements _Ticket {
   @override
   final DateTime? lastActivityAt;
   @override
+  final DateTime? resolvedAt;
+  @override
+  final DateTime? closedAt;
+  @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
 
   @override
   String toString() {
-    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, resolvedAt: $resolvedAt, closedAt: $closedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -325,6 +357,10 @@ class _$TicketImpl implements _Ticket {
             (identical(other.agentId, agentId) || other.agentId == agentId) &&
             (identical(other.lastActivityAt, lastActivityAt) ||
                 other.lastActivityAt == lastActivityAt) &&
+            (identical(other.resolvedAt, resolvedAt) ||
+                other.resolvedAt == resolvedAt) &&
+            (identical(other.closedAt, closedAt) ||
+                other.closedAt == closedAt) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -345,6 +381,8 @@ class _$TicketImpl implements _Ticket {
     employeeId,
     agentId,
     lastActivityAt,
+    resolvedAt,
+    closedAt,
     createdAt,
     updatedAt,
   );
@@ -375,6 +413,8 @@ abstract class _Ticket implements Ticket {
     required final String employeeId,
     final String? agentId,
     final DateTime? lastActivityAt,
+    final DateTime? resolvedAt,
+    final DateTime? closedAt,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$TicketImpl;
@@ -401,6 +441,10 @@ abstract class _Ticket implements Ticket {
   String? get agentId;
   @override
   DateTime? get lastActivityAt;
+  @override
+  DateTime? get resolvedAt;
+  @override
+  DateTime? get closedAt;
   @override
   DateTime get createdAt;
   @override

@@ -1,9 +1,9 @@
 /// API endpoint URL constants for the DeskLine backend.
-/// These will be used in Phase 2 when connecting to the real API.
+/// Single source of truth for all endpoint paths.
 class ApiEndpoints {
   const ApiEndpoints._();
 
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'http://10.0.2.2:4000/api';
 
   // Auth
   static const String login = '/auth/login';
@@ -15,14 +15,22 @@ class ApiEndpoints {
   // Tickets
   static const String tickets = '/tickets';
   static String ticketById(String id) => '/tickets/$id';
-  static String ticketStatus(String id) => '/tickets/$id/status';
+  static String ticketStatus(String id) => '/tickets/$id';
   static String ticketEscalate(String id) => '/tickets/$id/escalate';
-  static String ticketReassign(String id) => '/tickets/$id/reassign';
+  static String ticketReassign(String id) => '/tickets/$id';
+  static String ticketConfirmResolution(String id) =>
+      '/tickets/$id/confirm-resolution';
+  static String ticketRejectResolution(String id) =>
+      '/tickets/$id/reject-resolution';
+  static String ticketRequestHumanHelp(String id) =>
+      '/tickets/$id/request-human-help';
 
-  // Users
-  static const String users = '/users';
-  static String userById(String id) => '/users/$id';
-  static String deactivateUser(String id) => '/users/$id/deactivate';
+  // Ticket Comments
+  static String ticketComments(String id) => '/tickets/$id/comments';
+
+  // Users / Profile
+  static const String userProfile = '/users/profile';
+  static const String userFcmToken = '/users/me/fcm-token';
 
   // Notifications
   static const String notifications = '/notifications';
@@ -30,10 +38,20 @@ class ApiEndpoints {
   static const String notificationsMarkAllRead = '/notifications/read-all';
   static const String notificationsUnreadCount = '/notifications/unread-count';
 
-  // Admin
-  static const String adminCreateUser = '/admin/users';
+  // Admin - Users
+  static const String adminUsers = '/admin/users';
+  static String adminUserById(String id) => '/admin/users/$id';
+  static String adminDeactivateUser(String id) => '/admin/users/$id/deactivate';
+
+  // Admin - Logs & Dashboard
   static const String activityLogs = '/admin/activity-logs';
   static const String notificationLogs = '/admin/notification-logs';
-  static const String ticketAnalytics = '/admin/analytics/tickets';
-  static const String agentWorkload = '/admin/analytics/agent-workload';
+  static const String adminDashboard = '/admin/dashboard';
+  static const String adminAgentLoad = '/admin/agent-load';
+  static const String adminAnnouncements = '/admin/announcements';
+
+  // Supervisor
+  static const String supervisorEscalations = '/admin/supervisor/escalations';
+  static const String supervisorDashboard = '/admin/supervisor/dashboard';
+  static const String agentMetrics = '/admin/agent/metrics';
 }

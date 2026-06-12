@@ -9,6 +9,7 @@ abstract class PaginationMeta with _$PaginationMeta {
     required int total,
     required int page,
     required int pageSize,
+    int? totalPages,
   }) = _PaginationMeta;
 
   factory PaginationMeta.fromJson(Map<String, dynamic> json) =>

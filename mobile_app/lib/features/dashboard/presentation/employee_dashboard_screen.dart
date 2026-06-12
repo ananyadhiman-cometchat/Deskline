@@ -97,7 +97,7 @@ class _EmployeeDashboardScreenState
                 return TicketCard(
                   ticket: ticket,
                   onTap: () {
-                    context.go('/employee/tickets/${ticket.id}');
+                    context.go('/tickets/${ticket.id}');
                   },
                 );
               },
@@ -164,7 +164,7 @@ class _EmployeeDashboardScreenState
                     ),
                   ),
                   onTap: () {
-                    context.go('/employee/tickets/${ticket.id}');
+                    context.go('/tickets/${ticket.id}');
                   },
                 );
               },

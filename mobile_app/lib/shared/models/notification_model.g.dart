@@ -35,4 +35,5 @@ const _$NotificationTypeEnumMap = {
   NotificationType.assignment: 'assignment',
   NotificationType.escalation: 'escalation',
   NotificationType.announcement: 'announcement',
+  NotificationType.cometchat: 'cometchat',
 };

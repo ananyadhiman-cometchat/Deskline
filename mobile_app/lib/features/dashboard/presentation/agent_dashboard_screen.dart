@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/color_scheme.dart';
 import '../../../core/theme/spacing.dart';
@@ -47,7 +48,10 @@ class AgentDashboardScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           ...assigned.map((t) => Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: TicketCard(ticket: t),
+            child: TicketCard(
+              ticket: t,
+              onTap: () => context.go('/tickets/${t.id}'),
+            ),
           )),
           if (assigned.isEmpty)
             Text(

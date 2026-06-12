@@ -137,7 +137,7 @@ class _TicketListScreenState extends ConsumerState<TicketListScreen> {
                       return TicketCard(
                         ticket: ticket,
                         onTap: () =>
-                            context.go('/employee/tickets/${ticket.id}'),
+                            context.go('/tickets/${ticket.id}'),
                       );
                     },
                   ),

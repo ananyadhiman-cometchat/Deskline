@@ -56,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         final location = state.matchedLocation;
 
         // Shared routes accessible by all roles
-        if (location == '/profile' || location == '/notifications') {
+        if (location == '/profile' || location == '/notifications' || location.startsWith('/tickets/')) {
           return null;
         }
 
@@ -105,6 +105,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/notifications',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: NotificationCenterScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/tickets/:id',
+            pageBuilder: (context, state) => FadeSlideTransitionPage(
+              child: TicketDetailScreen(
+                ticketId: state.pathParameters['id']!,
+              ),
             ),
           ),
 
@@ -199,6 +207,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/admin/dashboard',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: AdminDashboardScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/tickets',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TicketListScreen(),
             ),
           ),
           GoRoute(

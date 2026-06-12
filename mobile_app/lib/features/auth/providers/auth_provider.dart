@@ -1,24 +1,36 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/networking/dio_client.dart';
+import '../../../core/networking/dio_provider.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/services/secure_storage_provider.dart';
 import '../../../shared/services/secure_storage_service.dart';
+import '../../../shared/services/environment_provider.dart';
+import '../../notifications/services/push_notification_service.dart';
+import '../data/auth_api_service.dart';
 import '../data/auth_repository.dart';
 import '../data/api_auth_repository.dart';
 import '../data/mock_auth_repository.dart';
-import '../../../shared/services/environment_provider.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return ref.watch(dataSourceProvider)==DataSource.api
-      ? ApiAuthRepository()
-      : MockAuthRepository();
+  if (ref.watch(dataSourceProvider) == DataSource.api) {
+    final dioClient = ref.watch(dioClientProvider);
+    final storage = ref.watch(secureStorageProvider);
+    return ApiAuthRepository(
+      apiService: AuthApiService(dioClient),
+      storage: storage,
+    );
+  }
+  return MockAuthRepository();
 });
 
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
+  final dioClient = ref.watch(dioClientProvider);
   return AuthStateNotifier(
     ref.watch(authRepositoryProvider),
     ref.watch(secureStorageProvider),
+    dioClient,
   );
 });
 
@@ -55,10 +67,10 @@ class AuthState {
 class AuthStateNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SecureStorageService _secureStorage;
+  final DioClient _dioClient;
 
-  AuthStateNotifier(this._repository, this._secureStorage)
+  AuthStateNotifier(this._repository, this._secureStorage, this._dioClient)
       : super(const AuthState()) {
-    // Initialize auth state from storage
     _initialize();
   }
 
@@ -67,15 +79,14 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       final userJson = await _secureStorage.getUser();
       if (userJson != null) {
         final user = User.fromJson(userJson);
-        state = AuthState(
-          user: user,
-          isInitialized: true,
-        );
+        state = AuthState(user: user, isInitialized: true);
+
+        // Register FCM token on app resume with existing session
+        _registerFcmToken();
       } else {
         state = state.copyWith(isInitialized: true);
       }
     } catch (e) {
-      // If there's an error reading from storage, clear everything
       await _secureStorage.clearAll();
       state = const AuthState(isInitialized: true);
     }
@@ -86,15 +97,17 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     try {
       final response =
           await _repository.login(email: email, password: password);
-      
-      // Save tokens and user to secure storage
+
       await _secureStorage.saveToken(
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       );
       await _secureStorage.saveUser(response.user.toJson());
-      
-      state = AuthState(user: response.user);
+
+      state = AuthState(user: response.user, isInitialized: true);
+
+      // Register FCM token after successful login
+      _registerFcmToken();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
@@ -115,15 +128,17 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
         password: password,
         department: department,
       );
-      
-      // Save tokens and user to secure storage
+
       await _secureStorage.saveToken(
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       );
       await _secureStorage.saveUser(response.user.toJson());
-      
-      state = AuthState(user: response.user);
+
+      state = AuthState(user: response.user, isInitialized: true);
+
+      // Register FCM token after successful registration
+      _registerFcmToken();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
@@ -133,13 +148,11 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     try {
       await _repository.logout();
-      await _secureStorage.clearAll();
-      state = const AuthState();
-    } catch (e) {
-      // Even if logout fails on server, clear local storage
-      await _secureStorage.clearAll();
-      state = const AuthState();
+    } catch (_) {
+      // Even if server logout fails, proceed with local cleanup
     }
+    await _secureStorage.clearAll();
+    state = const AuthState(isInitialized: true);
   }
 
   Future<void> refreshAuthState() async {
@@ -147,17 +160,22 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       final userJson = await _secureStorage.getUser();
       if (userJson != null) {
         final user = User.fromJson(userJson);
-        state = AuthState(user: user);
+        state = AuthState(user: user, isInitialized: true);
       } else {
-        state = const AuthState();
+        state = const AuthState(isInitialized: true);
       }
     } catch (e) {
       await _secureStorage.clearAll();
-      state = const AuthState();
+      state = const AuthState(isInitialized: true);
     }
   }
 
   void setUser(User user) {
-    state = AuthState(user: user);
+    state = AuthState(user: user, isInitialized: true);
+  }
+
+  /// Fire-and-forget FCM token registration
+  void _registerFcmToken() {
+    PushNotificationService.registerToken(_dioClient);
   }
 }

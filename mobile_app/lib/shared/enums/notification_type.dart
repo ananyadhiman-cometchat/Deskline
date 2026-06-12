@@ -9,4 +9,6 @@ enum NotificationType {
   escalation,
   @JsonValue('announcement')
   announcement,
+  @JsonValue('cometchat')
+  cometchat,
 }

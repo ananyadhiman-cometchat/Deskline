@@ -80,7 +80,7 @@ class ActivityLogsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${log.entityType} · ${log.entityId.substring(0, 8)}',
+                        '${log.entityType} · ${log.entityId.length > 8 ? log.entityId.substring(0, 8) : log.entityId}',
                         style: AppTypography.caption.copyWith(
                           color: colors.textMuted,
                         ),

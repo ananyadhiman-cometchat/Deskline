@@ -352,8 +352,8 @@ class MainScaffold extends ConsumerWidget {
       case UserRole.admin:
         return const [
           _NavItem(label: 'Dashboard', shortLabel: 'Home', icon: Icons.dashboard_outlined, route: '/admin/dashboard'),
+          _NavItem(label: 'Tickets', shortLabel: 'Tickets', icon: Icons.list_alt_outlined, route: '/admin/tickets'),
           _NavItem(label: 'Users', shortLabel: 'Users', icon: Icons.people_outline, route: '/admin/users'),
-          _NavItem(label: 'Activity', shortLabel: 'Logs', icon: Icons.history_outlined, route: '/admin/activity-logs'),
           _NavItem(label: 'Analytics', shortLabel: 'Stats', icon: Icons.analytics_outlined, route: '/admin/analytics'),
         ];
     }

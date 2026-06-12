@@ -24,6 +24,7 @@ mixin _$PaginationMeta {
   int get total => throw _privateConstructorUsedError;
   int get page => throw _privateConstructorUsedError;
   int get pageSize => throw _privateConstructorUsedError;
+  int? get totalPages => throw _privateConstructorUsedError;
 
   /// Serializes this PaginationMeta to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -42,7 +43,7 @@ abstract class $PaginationMetaCopyWith<$Res> {
     $Res Function(PaginationMeta) then,
   ) = _$PaginationMetaCopyWithImpl<$Res, PaginationMeta>;
   @useResult
-  $Res call({int total, int page, int pageSize});
+  $Res call({int total, int page, int pageSize, int? totalPages});
 }
 
 /// @nodoc
@@ -63,6 +64,7 @@ class _$PaginationMetaCopyWithImpl<$Res, $Val extends PaginationMeta>
     Object? total = null,
     Object? page = null,
     Object? pageSize = null,
+    Object? totalPages = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -78,6 +80,10 @@ class _$PaginationMetaCopyWithImpl<$Res, $Val extends PaginationMeta>
                 ? _value.pageSize
                 : pageSize // ignore: cast_nullable_to_non_nullable
                       as int,
+            totalPages: freezed == totalPages
+                ? _value.totalPages
+                : totalPages // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -93,7 +99,7 @@ abstract class _$$PaginationMetaImplCopyWith<$Res>
   ) = __$$PaginationMetaImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int total, int page, int pageSize});
+  $Res call({int total, int page, int pageSize, int? totalPages});
 }
 
 /// @nodoc
@@ -113,6 +119,7 @@ class __$$PaginationMetaImplCopyWithImpl<$Res>
     Object? total = null,
     Object? page = null,
     Object? pageSize = null,
+    Object? totalPages = freezed,
   }) {
     return _then(
       _$PaginationMetaImpl(
@@ -128,6 +135,10 @@ class __$$PaginationMetaImplCopyWithImpl<$Res>
             ? _value.pageSize
             : pageSize // ignore: cast_nullable_to_non_nullable
                   as int,
+        totalPages: freezed == totalPages
+            ? _value.totalPages
+            : totalPages // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -140,6 +151,7 @@ class _$PaginationMetaImpl implements _PaginationMeta {
     required this.total,
     required this.page,
     required this.pageSize,
+    this.totalPages,
   });
 
   factory _$PaginationMetaImpl.fromJson(Map<String, dynamic> json) =>
@@ -151,10 +163,12 @@ class _$PaginationMetaImpl implements _PaginationMeta {
   final int page;
   @override
   final int pageSize;
+  @override
+  final int? totalPages;
 
   @override
   String toString() {
-    return 'PaginationMeta(total: $total, page: $page, pageSize: $pageSize)';
+    return 'PaginationMeta(total: $total, page: $page, pageSize: $pageSize, totalPages: $totalPages)';
   }
 
   @override
@@ -165,12 +179,15 @@ class _$PaginationMetaImpl implements _PaginationMeta {
             (identical(other.total, total) || other.total == total) &&
             (identical(other.page, page) || other.page == page) &&
             (identical(other.pageSize, pageSize) ||
-                other.pageSize == pageSize));
+                other.pageSize == pageSize) &&
+            (identical(other.totalPages, totalPages) ||
+                other.totalPages == totalPages));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, total, page, pageSize);
+  int get hashCode =>
+      Object.hash(runtimeType, total, page, pageSize, totalPages);
 
   /// Create a copy of PaginationMeta
   /// with the given fields replaced by the non-null parameter values.
@@ -194,6 +211,7 @@ abstract class _PaginationMeta implements PaginationMeta {
     required final int total,
     required final int page,
     required final int pageSize,
+    final int? totalPages,
   }) = _$PaginationMetaImpl;
 
   factory _PaginationMeta.fromJson(Map<String, dynamic> json) =
@@ -205,6 +223,8 @@ abstract class _PaginationMeta implements PaginationMeta {
   int get page;
   @override
   int get pageSize;
+  @override
+  int? get totalPages;
 
   /// Create a copy of PaginationMeta
   /// with the given fields replaced by the non-null parameter values.

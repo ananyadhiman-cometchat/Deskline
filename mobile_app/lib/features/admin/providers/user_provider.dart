@@ -1,8 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../data/mock_user_repository.dart';
-import '../data/user_repository.dart';
-
-final userRepositoryProvider = Provider<UserRepository>((ref) {
-  return MockUserRepository();
-});
+// User repository provider is now defined in admin_provider.dart
+// This file is kept for backward compatibility with imports.
+export 'admin_provider.dart' show userRepositoryProvider;

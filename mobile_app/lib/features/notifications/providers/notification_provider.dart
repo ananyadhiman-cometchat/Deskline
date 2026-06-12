@@ -1,16 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/networking/dio_provider.dart';
+import '../../../shared/models/models.dart';
+import '../../../shared/services/environment_provider.dart';
+import '../data/api_notification_repository.dart';
 import '../data/mock_notification_repository.dart';
 import '../data/notification_repository.dart';
-import '../../../shared/models/models.dart';
 
 // Repository provider
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  if (ref.watch(dataSourceProvider) == DataSource.api) {
+    final dioClient = ref.watch(dioClientProvider);
+    return ApiNotificationRepository(dioClient: dioClient);
+  }
   return MockNotificationRepository();
 });
 
 // Notification list provider
-final notificationsProvider = FutureProvider<List<AppNotification>>((ref) async {
+final notificationsProvider =
+    FutureProvider<List<AppNotification>>((ref) async {
   final repository = ref.watch(notificationRepositoryProvider);
   final response = await repository.getNotifications();
   return response.data;

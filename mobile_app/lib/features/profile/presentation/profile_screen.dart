@@ -96,7 +96,7 @@ class ProfileScreen extends ConsumerWidget {
         _InfoRow(label: 'ROLE', value: user.role.name.toUpperCase(), colors: colors),
         _InfoRow(label: 'DEPARTMENT', value: user.department.name.toUpperCase(), colors: colors),
         _InfoRow(label: 'STATUS', value: user.isActive ? 'ACTIVE' : 'INACTIVE', colors: colors),
-        _InfoRow(label: 'USER ID', value: user.id.substring(0, 8).toUpperCase(), colors: colors),
+        _InfoRow(label: 'USER ID', value: user.id.length > 8 ? user.id.substring(0, 8).toUpperCase() : user.id.toUpperCase(), colors: colors),
         _InfoRow(label: 'JOINED', value: _formatDate(user.createdAt), colors: colors),
       ],
     );
