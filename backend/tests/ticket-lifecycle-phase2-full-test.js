@@ -52,7 +52,7 @@ function assert(condition, message) {
     body: JSON.stringify({
       title: 'Phase2 Lifecycle Test',
       description: 'End to end lifecycle validation',
-      category: 'HR',
+      category: 'IT',
       subType: 'information',
       priority: 'low'
     })
@@ -62,7 +62,7 @@ function assert(condition, message) {
   console.log(JSON.stringify(create, null, 2));
 
   const ticketId = create.body?.data?.id;
-  assert(ticketId, 'Information ticket created');
+  node tests/ticket-lifecycle-phase2-full-test.jsassert(ticketId, 'Information ticket created');
 
   const humanHelp = await request(`/tickets/${ticketId}/request-human-help`, {
     method: 'POST',
@@ -71,25 +71,12 @@ function assert(condition, message) {
 
   assert(humanHelp.body?.data?.status === 'in_progress', 'Human help requested');
 
-  const getUserId = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString()).sub;
-  const agentId = getUserId(agentToken);
-  const supervisorId = getUserId(supervisorToken);
-
-  await request(`/tickets/${ticketId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${supervisorToken}` },
-    body: JSON.stringify({ agentId, status: 'in_progress' })
-  });
-
   const resolve = await request(`/tickets/${ticketId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${agentToken}` },
     body: JSON.stringify({ status: 'resolved' })
   });
 
-  if (resolve.body?.data?.status !== 'resolved') {
-    console.log('RESOLVE FAILED:', JSON.stringify(resolve, null, 2));
-  }
   assert(resolve.body?.data?.status === 'resolved', 'Agent resolved ticket');
 
   const reject = await request(`/tickets/${ticketId}/reject-resolution`, {
@@ -118,7 +105,7 @@ function assert(condition, message) {
     body: JSON.stringify({
       title: 'Escalation Test',
       description: 'Supervisor ownership validation',
-      category: 'HR',
+      category: 'IT',
       subType: 'action',
       priority: 'high'
     })
@@ -126,12 +113,6 @@ function assert(condition, message) {
 
   const escalationId = escalationCreate.body?.data?.id;
   assert(escalationId, 'Escalation ticket created');
-
-  await request(`/tickets/${escalationId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${supervisorToken}` },
-    body: JSON.stringify({ agentId, status: 'open' })
-  });
 
   await request(`/tickets/${escalationId}`, {
     method: 'PATCH',
@@ -145,12 +126,6 @@ function assert(condition, message) {
   });
 
   assert(escalated.body?.data?.status === 'escalated', 'Ticket escalated');
-
-  await request(`/tickets/${escalationId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${supervisorToken}` },
-    body: JSON.stringify({ agentId: supervisorId, status: 'escalated' })
-  });
 
   const agentBlocked = await request(`/tickets/${escalationId}`, {
     method: 'PATCH',

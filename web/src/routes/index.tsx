@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AuthGuard } from './AuthGuard'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
-import { useAuthStore } from '@/store/authStore'
 
 // Pages — lazy loaded for code splitting
 import { lazy, Suspense } from 'react'
@@ -14,6 +13,7 @@ const RaiseTicketPage = lazy(() => import('@/pages/employee/RaiseTicketPage'))
 const TicketDetailPage = lazy(() => import('@/pages/shared/TicketDetailPage'))
 const NotificationCentrePage = lazy(() => import('@/pages/shared/NotificationCentrePage'))
 const ProfilePage = lazy(() => import('@/pages/shared/ProfilePage'))
+const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const AgentInboxPage = lazy(() => import('@/pages/agent/InboxPage'))
 const AgentMetricsPage = lazy(() => import('@/pages/agent/AgentMetricsPage'))
 const AllTicketsPage = lazy(() => import('@/pages/supervisor/AllTicketsPage'))
@@ -52,6 +52,12 @@ export const router = createBrowserRouter([
         element: <S><RegisterPage /></S>,
       },
     ],
+  },
+
+  // --- Landing Page ---
+  {
+    path: '/',
+    element: <S><LandingPage /></S>,
   },
 
   // --- Protected routes ---
@@ -168,35 +174,12 @@ export const router = createBrowserRouter([
         element: <S><ProfilePage /></S>,
       },
 
-      // Default redirect
-      {
-        index: true,
-        path: '/',
-        element: <RootRedirect />,
-      },
     ],
   },
 
   // Catch-all
   {
     path: '*',
-    element: <Navigate to="/login" replace />,
+    element: <Navigate to="/" replace />,
   },
 ])
-
-function RootRedirect() {
-  const { user, isAuthenticated } = useAuthStore()
-
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />
-  }
-
-  const roleHome: Record<string, string> = {
-    employee: '/dashboard',
-    agent: '/inbox',
-    supervisor: '/tickets',
-    admin: '/admin',
-  }
-
-  return <Navigate to={roleHome[user.role] ?? '/dashboard'} replace />
-}
