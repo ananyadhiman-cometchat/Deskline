@@ -1,0 +1,1 @@
+import 'package:dio/dio.dart'; import '../../../shared/services/api_client.dart'; import '../../../shared/services/api_constants.dart'; import '../dto/login_request_dto.dart'; class AuthApiService { Future<Response> login(LoginRequestDto dto)=>ApiClient.dio.post('${ApiConstants.baseUrl}${ApiConstants.auth}/login',data:dto.toJson()); }

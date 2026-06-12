@@ -1,0 +1,1 @@
+import 'package:flutter/material.dart'; class ActivityHistoryCard extends StatelessWidget{ final List<String> activities; const ActivityHistoryCard({super.key,required this.activities}); @override Widget build(BuildContext context)=>Column(children:activities.map((e)=>ListTile(leading:const Icon(Icons.history),title:Text(e))).toList()); }

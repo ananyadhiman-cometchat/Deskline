@@ -1,0 +1,1 @@
+class TicketResponseDto { final Map<String,dynamic> data; const TicketResponseDto(this.data); factory TicketResponseDto.fromJson(Map<String,dynamic> json)=>TicketResponseDto(json); }

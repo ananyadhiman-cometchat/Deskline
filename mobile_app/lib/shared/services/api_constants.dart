@@ -1,0 +1,2 @@
+class ApiConstants { static const String baseUrl='http://localhost:3000/api'; static const String tickets='/tickets'; static const String auth='/auth'; }
+class UserApiConstants { static const String fcmToken='/users/me/fcm-token'; }
