@@ -8,7 +8,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { Pagination } from '@/components/ui/Pagination'
 import { useNavigate } from 'react-router-dom'
 import { useSupervisorEscalations } from '@/hooks/useAdmin'
-import type { TicketFilters as Filters } from '@/types'
+import type { TicketFilters as Filters, Ticket } from '@/types'
 import { ListOrdered } from 'lucide-react'
 
 export default function AllTicketsPage() {
@@ -41,7 +41,7 @@ export default function AllTicketsPage() {
   // if backend doesn't do the strict OR logic.
   const displayTickets = activeTab === 'escalation'
     ? escalationData?.data ?? []
-    : data?.data.filter(t => activeTab === 'all')
+    : data?.data ?? []
 
   return (
     <div className="space-y-6">
@@ -91,7 +91,7 @@ export default function AllTicketsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {displayTickets?.map((ticket) => (
+          {displayTickets?.map((ticket: Ticket) => (
             <TicketCard
               key={ticket.id}
               ticket={ticket}

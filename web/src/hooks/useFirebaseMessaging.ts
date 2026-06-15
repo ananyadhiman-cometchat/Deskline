@@ -24,7 +24,7 @@ export function useFirebaseMessaging() {
             return;
           }
 
-          const token = await getToken(messaging, { vapidKey });
+          const token = await getToken(messaging!, { vapidKey });
           
           if (token) {
             setFcmToken(token);
@@ -44,7 +44,7 @@ export function useFirebaseMessaging() {
     requestPermissionAndGetToken();
 
     // Listen for foreground messages
-    const unsubscribe = onMessage(messaging, (payload) => {
+    const unsubscribe = onMessage(messaging!, (payload) => {
       console.log('Message received. ', payload);
       const title = payload.notification?.title || payload.data?.title || 'New Notification';
       const body = payload.notification?.body || payload.data?.body;

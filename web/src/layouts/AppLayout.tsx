@@ -12,7 +12,7 @@ import type { UserRole } from '@/types'
 // ============================================================
 
 export function AppLayout() {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const { sidebarOpen, setSidebarOpen, toggleSidebar, theme, toggleTheme } = useUIStore()
   const unreadCount = useUnreadCount()
   const navigate = useNavigate()

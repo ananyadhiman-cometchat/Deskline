@@ -17,6 +17,16 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
   const message = error instanceof Error ? error.message : 'Internal server error';
   const code = error instanceof AppError ? error.code : normalizeErrorCode(message);
 
+  // Log the actual error for debugging (especially 500s)
+  if (statusCode >= 500) {
+    console.error('[ERROR]', {
+      statusCode,
+      code,
+      message,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  }
+
   res.status(statusCode).json({
     error: {
       code,

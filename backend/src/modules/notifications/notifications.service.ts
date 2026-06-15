@@ -50,7 +50,10 @@ export async function createNotification(
   });
 
   if (recipient.fcmToken) {
-    await sendPushNotification(recipient.fcmToken, input.title, input.body).catch(() => null);
+    await sendPushNotification(recipient.fcmToken, input.title, input.body).catch((err) => {
+      console.error('FCM push failed (non-fatal):', err?.message ?? err);
+      return null;
+    });
   }
 
   return notification;

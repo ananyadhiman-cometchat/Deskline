@@ -14,7 +14,6 @@ export default function AgentMetricsPage() {
 
   const isOptimal = rate >= 80
   const isAcceptable = rate >= 60 && rate < 80
-  const isCritical = rate < 60
 
   const healthLabel = isOptimal ? 'OPTIMAL' : isAcceptable ? 'ACCEPTABLE' : 'CRITICAL'
   const healthColor = isOptimal ? 'text-emerald-500' : isAcceptable ? 'text-amber-500' : 'text-red-500'

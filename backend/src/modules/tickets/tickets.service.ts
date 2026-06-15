@@ -154,18 +154,23 @@ async function notifyTicketOwnerUpdate(input: {
   oldStatus: TicketStatus;
   newStatus: TicketStatus;
 }) {
-  return createNotification(prisma, {
-    actorId: input.actorId,
-    userId: input.recipientId,
-    type: NotificationType.ticket_update,
-    title: `Ticket #${input.ticketId} updated`,
-    body: `Your ticket is now ${input.newStatus.replace('_', ' ')}.`,
-    metadata: {
-      ticketId: input.ticketId,
-      oldStatus: input.oldStatus,
-      newStatus: input.newStatus
-    }
-  });
+  try {
+    return await createNotification(prisma, {
+      actorId: input.actorId,
+      userId: input.recipientId,
+      type: NotificationType.ticket_update,
+      title: `Ticket #${input.ticketId} updated`,
+      body: `Your ticket is now ${input.newStatus.replace('_', ' ')}.`,
+      metadata: {
+        ticketId: input.ticketId,
+        oldStatus: input.oldStatus,
+        newStatus: input.newStatus
+      }
+    });
+  } catch (error) {
+    console.error('Non-fatal: notifyTicketOwnerUpdate failed:', (error as Error)?.message);
+    return null;
+  }
 }
 
 async function notifyAssignment(input: {
@@ -176,16 +181,21 @@ async function notifyAssignment(input: {
   title: string;
   body: string;
 }) {
-  return createNotification(prisma, {
-    actorId: input.actorId,
-    userId: input.recipientId,
-    type: input.recipientType,
-    title: input.title,
-    body: input.body,
-    metadata: {
-      ticketId: input.ticketId
-    }
-  });
+  try {
+    return await createNotification(prisma, {
+      actorId: input.actorId,
+      userId: input.recipientId,
+      type: input.recipientType,
+      title: input.title,
+      body: input.body,
+      metadata: {
+        ticketId: input.ticketId
+      }
+    });
+  } catch (error) {
+    console.error('Non-fatal: notifyAssignment failed:', (error as Error)?.message);
+    return null;
+  }
 }
 
 async function notifyDepartmentSupervisors(input: {
@@ -195,30 +205,37 @@ async function notifyDepartmentSupervisors(input: {
   title: string;
   body: string;
 }) {
-  const supervisors = await prisma.user.findMany({
-    where: {
-      role: UserRole.supervisor,
-      department: input.department,
-      isActive: true
-    },
-    select: { id: true }
-  });
+  try {
+    const supervisors = await prisma.user.findMany({
+      where: {
+        role: UserRole.supervisor,
+        department: input.department,
+        isActive: true
+      },
+      select: { id: true }
+    });
 
-  await Promise.all(
-    supervisors.map((supervisor) =>
-      createNotification(prisma, {
-        actorId: input.actorId,
-        userId: supervisor.id,
-        type: NotificationType.assignment,
-        title: input.title,
-        body: input.body,
-        metadata: {
-          ticketId: input.ticketId,
-          department: input.department
-        }
-      })
-    )
-  );
+    await Promise.all(
+      supervisors.map((supervisor) =>
+        createNotification(prisma, {
+          actorId: input.actorId,
+          userId: supervisor.id,
+          type: NotificationType.assignment,
+          title: input.title,
+          body: input.body,
+          metadata: {
+            ticketId: input.ticketId,
+            department: input.department
+          }
+        }).catch((err) => {
+          console.error('Non-fatal: supervisor notification failed:', (err as Error)?.message);
+          return null;
+        })
+      )
+    );
+  } catch (error) {
+    console.error('Non-fatal: notifyDepartmentSupervisors failed:', (error as Error)?.message);
+  }
 }
 
 import { generateTicketResponse } from '../ai/ai.service.js';
