@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/networking/dio_provider.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/services/environment_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../data/api_notification_repository.dart';
 import '../data/mock_notification_repository.dart';
 import '../data/notification_repository.dart';
@@ -16,9 +17,12 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   return MockNotificationRepository();
 });
 
-// Notification list provider
+// Notification list provider — watches auth to re-fetch on login/logout
 final notificationsProvider =
     FutureProvider<List<AppNotification>>((ref) async {
+  final auth = ref.watch(authStateProvider);
+  if (!auth.isAuthenticated) return [];
+
   final repository = ref.watch(notificationRepositoryProvider);
   final response = await repository.getNotifications();
   return response.data;

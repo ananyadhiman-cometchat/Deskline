@@ -12,6 +12,7 @@ import '../../../shared/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/ai_response_panel.dart';
+import '../widgets/communication_thread.dart';
 import '../widgets/ticket_badges.dart';
 import '../widgets/ticket_timeline.dart';
 
@@ -142,7 +143,10 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
         // ─── Communication Thread ───────────────────────────
         const SectionHeader(title: 'COMMUNICATION'),
         const SizedBox(height: AppSpacing.sm),
-        _buildCommunicationPlaceholder(colors),
+        CommunicationThread(
+          ticketId: widget.ticketId,
+          ticketStatus: ticket.status,
+        ),
         const SizedBox(height: AppSpacing.xl),
 
         // ─── Actions (role-based) ───────────────────────────
@@ -215,32 +219,6 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildCommunicationPlaceholder(DesklineColors colors) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        border: Border.all(color: colors.borderColor, width: 1),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.chat_bubble_outline, size: 32, color: colors.textMuted),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Communication thread',
-            style: AppTypography.bodySmall.copyWith(color: colors.textMuted),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Comments and updates will appear here.',
-            style: AppTypography.caption.copyWith(color: colors.textMuted),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 

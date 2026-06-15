@@ -6,4 +6,5 @@ export 'paginated_response.dart';
 export 'pagination_meta.dart';
 export 'ticket.dart';
 export 'ticket_analytics.dart';
+export 'ticket_comment.dart';
 export 'user.dart';

@@ -4,6 +4,7 @@ import '../../../core/networking/dio_provider.dart';
 import '../../../shared/enums/enums.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/services/environment_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../data/api_ticket_repository.dart';
 import '../data/mock_ticket_repository.dart';
 import '../data/ticket_api_service.dart';
@@ -31,8 +32,13 @@ final ticketsProvider = FutureProvider.family<PaginatedResponse<Ticket>,
   );
 });
 
-// Default ticket list (first page, no filters)
+// Default ticket list (first page, no filters).
+// Watches authStateProvider so it re-fetches when the user changes (login/logout).
 final defaultTicketsProvider = FutureProvider<List<Ticket>>((ref) async {
+  // Watch auth state — this causes auto-invalidation on login/logout
+  final auth = ref.watch(authStateProvider);
+  if (!auth.isAuthenticated) return [];
+
   final repository = ref.watch(ticketRepositoryProvider);
   final response = await repository.getTickets();
   return response.data;
