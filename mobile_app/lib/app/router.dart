@@ -169,12 +169,28 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: AgentInboxScreen(),
             ),
           ),
+          GoRoute(
+            path: '/agent/tickets/:id',
+            pageBuilder: (context, state) => FadeSlideTransitionPage(
+              child: TicketDetailScreen(
+                ticketId: state.pathParameters['id']!,
+              ),
+            ),
+          ),
 
           // ─── Supervisor Routes ────────────────────────────────
           GoRoute(
             path: '/supervisor/dashboard',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SupervisorDashboardScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/supervisor/tickets/:id',
+            pageBuilder: (context, state) => FadeSlideTransitionPage(
+              child: TicketDetailScreen(
+                ticketId: state.pathParameters['id']!,
+              ),
             ),
           ),
           GoRoute(

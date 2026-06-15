@@ -22,7 +22,24 @@ abstract class Ticket with _$Ticket {
     DateTime? closedAt,
     required DateTime createdAt,
     required DateTime updatedAt,
+    // Expanded relations (included in detail/list responses)
+    TicketUser? employee,
+    TicketUser? agent,
   }) = _Ticket;
 
   factory Ticket.fromJson(Map<String, dynamic> json) => _$TicketFromJson(json);
+}
+
+/// Lightweight user object nested in ticket responses.
+@freezed
+abstract class TicketUser with _$TicketUser {
+  const factory TicketUser({
+    required String id,
+    required String name,
+    required String email,
+    required Department department,
+  }) = _TicketUser;
+
+  factory TicketUser.fromJson(Map<String, dynamic> json) =>
+      _$TicketUserFromJson(json);
 }

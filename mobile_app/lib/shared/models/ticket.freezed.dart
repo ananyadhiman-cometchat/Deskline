@@ -34,7 +34,10 @@ mixin _$Ticket {
   DateTime? get resolvedAt => throw _privateConstructorUsedError;
   DateTime? get closedAt => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
-  DateTime get updatedAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt =>
+      throw _privateConstructorUsedError; // Expanded relations (included in detail/list responses)
+  TicketUser? get employee => throw _privateConstructorUsedError;
+  TicketUser? get agent => throw _privateConstructorUsedError;
 
   /// Serializes this Ticket to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -65,7 +68,12 @@ abstract class $TicketCopyWith<$Res> {
     DateTime? closedAt,
     DateTime createdAt,
     DateTime updatedAt,
+    TicketUser? employee,
+    TicketUser? agent,
   });
+
+  $TicketUserCopyWith<$Res>? get employee;
+  $TicketUserCopyWith<$Res>? get agent;
 }
 
 /// @nodoc
@@ -97,6 +105,8 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
     Object? closedAt = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? employee = freezed,
+    Object? agent = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -156,9 +166,45 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
                 ? _value.updatedAt
                 : updatedAt // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            employee: freezed == employee
+                ? _value.employee
+                : employee // ignore: cast_nullable_to_non_nullable
+                      as TicketUser?,
+            agent: freezed == agent
+                ? _value.agent
+                : agent // ignore: cast_nullable_to_non_nullable
+                      as TicketUser?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of Ticket
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $TicketUserCopyWith<$Res>? get employee {
+    if (_value.employee == null) {
+      return null;
+    }
+
+    return $TicketUserCopyWith<$Res>(_value.employee!, (value) {
+      return _then(_value.copyWith(employee: value) as $Val);
+    });
+  }
+
+  /// Create a copy of Ticket
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $TicketUserCopyWith<$Res>? get agent {
+    if (_value.agent == null) {
+      return null;
+    }
+
+    return $TicketUserCopyWith<$Res>(_value.agent!, (value) {
+      return _then(_value.copyWith(agent: value) as $Val);
+    });
   }
 }
 
@@ -185,7 +231,14 @@ abstract class _$$TicketImplCopyWith<$Res> implements $TicketCopyWith<$Res> {
     DateTime? closedAt,
     DateTime createdAt,
     DateTime updatedAt,
+    TicketUser? employee,
+    TicketUser? agent,
   });
+
+  @override
+  $TicketUserCopyWith<$Res>? get employee;
+  @override
+  $TicketUserCopyWith<$Res>? get agent;
 }
 
 /// @nodoc
@@ -216,6 +269,8 @@ class __$$TicketImplCopyWithImpl<$Res>
     Object? closedAt = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? employee = freezed,
+    Object? agent = freezed,
   }) {
     return _then(
       _$TicketImpl(
@@ -275,6 +330,14 @@ class __$$TicketImplCopyWithImpl<$Res>
             ? _value.updatedAt
             : updatedAt // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        employee: freezed == employee
+            ? _value.employee
+            : employee // ignore: cast_nullable_to_non_nullable
+                  as TicketUser?,
+        agent: freezed == agent
+            ? _value.agent
+            : agent // ignore: cast_nullable_to_non_nullable
+                  as TicketUser?,
       ),
     );
   }
@@ -298,6 +361,8 @@ class _$TicketImpl implements _Ticket {
     this.closedAt,
     required this.createdAt,
     required this.updatedAt,
+    this.employee,
+    this.agent,
   });
 
   factory _$TicketImpl.fromJson(Map<String, dynamic> json) =>
@@ -331,10 +396,15 @@ class _$TicketImpl implements _Ticket {
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
+  // Expanded relations (included in detail/list responses)
+  @override
+  final TicketUser? employee;
+  @override
+  final TicketUser? agent;
 
   @override
   String toString() {
-    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, resolvedAt: $resolvedAt, closedAt: $closedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, resolvedAt: $resolvedAt, closedAt: $closedAt, createdAt: $createdAt, updatedAt: $updatedAt, employee: $employee, agent: $agent)';
   }
 
   @override
@@ -364,7 +434,10 @@ class _$TicketImpl implements _Ticket {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                other.updatedAt == updatedAt) &&
+            (identical(other.employee, employee) ||
+                other.employee == employee) &&
+            (identical(other.agent, agent) || other.agent == agent));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -385,6 +458,8 @@ class _$TicketImpl implements _Ticket {
     closedAt,
     createdAt,
     updatedAt,
+    employee,
+    agent,
   );
 
   /// Create a copy of Ticket
@@ -417,6 +492,8 @@ abstract class _Ticket implements Ticket {
     final DateTime? closedAt,
     required final DateTime createdAt,
     required final DateTime updatedAt,
+    final TicketUser? employee,
+    final TicketUser? agent,
   }) = _$TicketImpl;
 
   factory _Ticket.fromJson(Map<String, dynamic> json) = _$TicketImpl.fromJson;
@@ -448,12 +525,230 @@ abstract class _Ticket implements Ticket {
   @override
   DateTime get createdAt;
   @override
-  DateTime get updatedAt;
+  DateTime get updatedAt; // Expanded relations (included in detail/list responses)
+  @override
+  TicketUser? get employee;
+  @override
+  TicketUser? get agent;
 
   /// Create a copy of Ticket
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$TicketImplCopyWith<_$TicketImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+TicketUser _$TicketUserFromJson(Map<String, dynamic> json) {
+  return _TicketUser.fromJson(json);
+}
+
+/// @nodoc
+mixin _$TicketUser {
+  String get id => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
+  String get email => throw _privateConstructorUsedError;
+  Department get department => throw _privateConstructorUsedError;
+
+  /// Serializes this TicketUser to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of TicketUser
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $TicketUserCopyWith<TicketUser> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $TicketUserCopyWith<$Res> {
+  factory $TicketUserCopyWith(
+    TicketUser value,
+    $Res Function(TicketUser) then,
+  ) = _$TicketUserCopyWithImpl<$Res, TicketUser>;
+  @useResult
+  $Res call({String id, String name, String email, Department department});
+}
+
+/// @nodoc
+class _$TicketUserCopyWithImpl<$Res, $Val extends TicketUser>
+    implements $TicketUserCopyWith<$Res> {
+  _$TicketUserCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of TicketUser
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? name = null,
+    Object? email = null,
+    Object? department = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            email: null == email
+                ? _value.email
+                : email // ignore: cast_nullable_to_non_nullable
+                      as String,
+            department: null == department
+                ? _value.department
+                : department // ignore: cast_nullable_to_non_nullable
+                      as Department,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$TicketUserImplCopyWith<$Res>
+    implements $TicketUserCopyWith<$Res> {
+  factory _$$TicketUserImplCopyWith(
+    _$TicketUserImpl value,
+    $Res Function(_$TicketUserImpl) then,
+  ) = __$$TicketUserImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String id, String name, String email, Department department});
+}
+
+/// @nodoc
+class __$$TicketUserImplCopyWithImpl<$Res>
+    extends _$TicketUserCopyWithImpl<$Res, _$TicketUserImpl>
+    implements _$$TicketUserImplCopyWith<$Res> {
+  __$$TicketUserImplCopyWithImpl(
+    _$TicketUserImpl _value,
+    $Res Function(_$TicketUserImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of TicketUser
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? name = null,
+    Object? email = null,
+    Object? department = null,
+  }) {
+    return _then(
+      _$TicketUserImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        email: null == email
+            ? _value.email
+            : email // ignore: cast_nullable_to_non_nullable
+                  as String,
+        department: null == department
+            ? _value.department
+            : department // ignore: cast_nullable_to_non_nullable
+                  as Department,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$TicketUserImpl implements _TicketUser {
+  const _$TicketUserImpl({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.department,
+  });
+
+  factory _$TicketUserImpl.fromJson(Map<String, dynamic> json) =>
+      _$$TicketUserImplFromJson(json);
+
+  @override
+  final String id;
+  @override
+  final String name;
+  @override
+  final String email;
+  @override
+  final Department department;
+
+  @override
+  String toString() {
+    return 'TicketUser(id: $id, name: $name, email: $email, department: $department)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$TicketUserImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.email, email) || other.email == email) &&
+            (identical(other.department, department) ||
+                other.department == department));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, id, name, email, department);
+
+  /// Create a copy of TicketUser
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$TicketUserImplCopyWith<_$TicketUserImpl> get copyWith =>
+      __$$TicketUserImplCopyWithImpl<_$TicketUserImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$TicketUserImplToJson(this);
+  }
+}
+
+abstract class _TicketUser implements TicketUser {
+  const factory _TicketUser({
+    required final String id,
+    required final String name,
+    required final String email,
+    required final Department department,
+  }) = _$TicketUserImpl;
+
+  factory _TicketUser.fromJson(Map<String, dynamic> json) =
+      _$TicketUserImpl.fromJson;
+
+  @override
+  String get id;
+  @override
+  String get name;
+  @override
+  String get email;
+  @override
+  Department get department;
+
+  /// Create a copy of TicketUser
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$TicketUserImplCopyWith<_$TicketUserImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

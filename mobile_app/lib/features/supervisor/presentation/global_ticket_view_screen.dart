@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/app_shell.dart';
 import '../../../core/widgets/section_header.dart';
@@ -17,7 +18,10 @@ class GlobalTicketViewScreen extends ConsumerWidget {
       child: ListView(
         children: [
           const SectionHeader(title: 'GLOBAL TICKETS'),
-          ...tickets.map((t) => TicketCard(ticket: t)),
+          ...tickets.map((t) => TicketCard(
+                ticket: t,
+                onTap: () => context.go('/supervisor/tickets/${t.id}'),
+              )),
         ],
       ),
     );

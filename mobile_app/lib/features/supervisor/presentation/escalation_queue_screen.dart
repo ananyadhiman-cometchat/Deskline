@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/app_shell.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -25,7 +26,10 @@ class EscalationQueueScreen extends ConsumerWidget {
           if (escalated.isEmpty)
             const EmptyState(message: 'No escalated tickets')
           else
-            ...escalated.map((e) => TicketCard(ticket: e)),
+            ...escalated.map((e) => TicketCard(
+                  ticket: e,
+                  onTap: () => context.go('/supervisor/tickets/${e.id}'),
+                )),
         ],
       ),
     );

@@ -73,7 +73,7 @@ class _AgentInboxScreenState extends ConsumerState<AgentInboxScreen> {
                     final ticket = tickets[index];
                     return TicketCard(
                       ticket: ticket,
-                      onTap: () => context.go('/tickets/${ticket.id}'),
+                      onTap: () => context.go('/agent/tickets/${ticket.id}'),
                     );
                   },
                 ),

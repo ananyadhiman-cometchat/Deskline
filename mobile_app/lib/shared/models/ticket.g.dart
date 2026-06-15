@@ -27,6 +27,12 @@ _$TicketImpl _$$TicketImplFromJson(Map<String, dynamic> json) => _$TicketImpl(
       : DateTime.parse(json['closedAt'] as String),
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
+  employee: json['employee'] == null
+      ? null
+      : TicketUser.fromJson(json['employee'] as Map<String, dynamic>),
+  agent: json['agent'] == null
+      ? null
+      : TicketUser.fromJson(json['agent'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$$TicketImplToJson(_$TicketImpl instance) =>
@@ -45,6 +51,8 @@ Map<String, dynamic> _$$TicketImplToJson(_$TicketImpl instance) =>
       'closedAt': instance.closedAt?.toIso8601String(),
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
+      'employee': instance.employee,
+      'agent': instance.agent,
     };
 
 const _$TicketCategoryEnumMap = {
@@ -72,4 +80,26 @@ const _$TicketStatusEnumMap = {
   TicketStatus.escalated: 'escalated',
   TicketStatus.resolved: 'resolved',
   TicketStatus.closed: 'closed',
+};
+
+_$TicketUserImpl _$$TicketUserImplFromJson(Map<String, dynamic> json) =>
+    _$TicketUserImpl(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      department: $enumDecode(_$DepartmentEnumMap, json['department']),
+    );
+
+Map<String, dynamic> _$$TicketUserImplToJson(_$TicketUserImpl instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'email': instance.email,
+      'department': _$DepartmentEnumMap[instance.department]!,
+    };
+
+const _$DepartmentEnumMap = {
+  Department.it: 'IT',
+  Department.hr: 'HR',
+  Department.general: 'General',
 };
