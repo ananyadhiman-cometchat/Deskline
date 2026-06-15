@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +7,15 @@ import 'features/notifications/services/push_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await PushNotificationService.initialize();
+
+  try {
+    await PushNotificationService.initialize();
+  } catch (e) {
+    // Firebase may fail on iOS simulator (no GoogleService-Info.plist in bundle)
+    // or if Firebase is not configured. App continues without push notifications.
+    debugPrint('Push notification init failed (non-fatal): $e');
+  }
+
   runApp(
     const ProviderScope(
       child: DesklineApp(),

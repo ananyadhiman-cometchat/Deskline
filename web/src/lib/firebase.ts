@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging } from "firebase/messaging";
+import { getMessaging, type Messaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -8,6 +8,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
+const isConfigured = !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
-export const messaging = typeof window !== "undefined" ? getMessaging(app) : null;
+export const app = isConfigured ? initializeApp(firebaseConfig) : null;
+
+export const messaging: Messaging | null =
+  isConfigured && typeof window !== "undefined" && app
+    ? getMessaging(app)
+    : null;
