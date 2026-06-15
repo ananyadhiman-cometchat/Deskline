@@ -20,7 +20,7 @@ class AdminDashboardScreen extends ConsumerWidget {
     final tickets = ref.watch(ticketListProvider);
 
     return RefreshIndicator(
-      onRefresh: RefreshService.simulateRefresh,
+      onRefresh: () => RefreshService.refreshAll(ref),
       child: ListView(
         children: [
           const SizedBox(height: AppSpacing.lg),

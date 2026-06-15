@@ -22,7 +22,7 @@ class AgentDashboardScreen extends ConsumerWidget {
     final newAssignments = tickets.where((t) => t.status == TicketStatus.open).take(3).toList();
 
     return RefreshIndicator(
-      onRefresh: RefreshService.simulateRefresh,
+      onRefresh: () => RefreshService.refreshAll(ref),
       child: ListView(
         children: [
           const SizedBox(height: AppSpacing.lg),
