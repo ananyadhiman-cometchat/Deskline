@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 
+import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { authRouter } from './modules/auth/auth.route.js';
@@ -13,9 +14,30 @@ import { adminRouter } from './modules/admin/admin.route.js';
 
 export const app = express();
 
+// Behind ALB + nginx: trust private-network proxies so req.ip and req.protocol
+// reflect the original client (via X-Forwarded-For / X-Forwarded-Proto).
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+
+// CORS allowlist driven by env (comma-separated). Falls back to local dev origins.
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://localhost',
+  'http://localhost:80'
+];
+const corsOrigins = env.CORS_ORIGINS
+  ? env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : defaultOrigins;
+
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://localhost', 'http://localhost:80'],
+  origin: (origin, callback) => {
+    // Allow same-origin / non-browser clients (mobile app, curl) which send no Origin header.
+    if (!origin) return callback(null, true);
+    if (corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true
 }));
 app.use(express.json());
