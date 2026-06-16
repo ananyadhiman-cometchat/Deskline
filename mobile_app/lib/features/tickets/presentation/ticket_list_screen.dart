@@ -7,6 +7,7 @@ import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../shared/enums/enums.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/ticket_card.dart';
 
@@ -27,6 +28,21 @@ class _TicketListScreenState extends ConsumerState<TicketListScreen> {
   Widget build(BuildContext context) {
     final colors = DesklineColors.of(context);
     var tickets = ref.watch(ticketListProvider);
+    final userRole = ref.watch(authStateProvider).user?.role ?? UserRole.employee;
+
+    // Determine route prefix based on role
+    String ticketDetailRoute(String id) {
+      switch (userRole) {
+        case UserRole.admin:
+          return '/admin/tickets/$id';
+        case UserRole.supervisor:
+          return '/supervisor/tickets/$id';
+        case UserRole.agent:
+          return '/agent/tickets/$id';
+        case UserRole.employee:
+          return '/employee/tickets/$id';
+      }
+    }
 
     // Apply filters
     if (_statusFilter != null) {
@@ -137,7 +153,7 @@ class _TicketListScreenState extends ConsumerState<TicketListScreen> {
                       return TicketCard(
                         ticket: ticket,
                         onTap: () =>
-                            context.go('/employee/tickets/${ticket.id}'),
+                            context.go(ticketDetailRoute(ticket.id)),
                       );
                     },
                   ),

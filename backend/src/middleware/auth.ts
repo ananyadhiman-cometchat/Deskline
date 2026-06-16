@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
+import jwt from 'jsonwebtoken';
 import type { UserRole } from '@prisma/client';
 
 import { hasPermission, type Permission } from '../config/rbac.js';
@@ -22,10 +23,23 @@ export async function authenticateRequest(req: Request, _res: Response, next: Ne
     const token = getBearerToken(req);
 
     if (!token) {
-      throw new AppError('Authentication required', 401);
+      throw new AppError('Authentication required', 401, 'AUTH_REQUIRED');
     }
 
-    const payload = verifyAccessToken(token);
+    let payload;
+    try {
+      payload = verifyAccessToken(token);
+    } catch (error) {
+      // Convert JWT errors to 401 so the client can trigger a token refresh
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AppError('Token expired', 401, 'TOKEN_EXPIRED');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
+      }
+      throw error;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
       select: {

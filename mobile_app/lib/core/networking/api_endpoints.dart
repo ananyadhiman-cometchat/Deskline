@@ -1,9 +1,19 @@
+import 'dart:io' show Platform;
+
 /// API endpoint URL constants for the DeskLine backend.
 /// Single source of truth for all endpoint paths.
 class ApiEndpoints {
   const ApiEndpoints._();
 
-  static const String baseUrl = 'http://10.0.2.2:4000/api';
+  /// Base URL adapts per platform:
+  /// - Android emulator: 10.0.2.2 (host machine alias)
+  /// - iOS simulator / physical device: localhost
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:4000/api';
+    }
+    return 'http://localhost:4000/api';
+  }
 
   // Auth
   static const String login = '/auth/login';

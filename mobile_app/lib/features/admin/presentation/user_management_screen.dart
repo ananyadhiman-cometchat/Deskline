@@ -162,7 +162,22 @@ class UserManagementScreen extends ConsumerWidget {
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryRed)),
       error: (error, stack) => Center(
-        child: Text('Error loading users', style: AppTypography.body.copyWith(color: AppColors.errorRed)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Error loading users', style: AppTypography.body.copyWith(color: AppColors.errorRed)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(usersProvider),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                foregroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              child: const Text('RETRY'),
+            ),
+          ],
+        ),
       ),
     );
   }

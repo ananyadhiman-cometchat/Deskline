@@ -10,10 +10,12 @@ Future<void> main() async {
 
   try {
     await PushNotificationService.initialize();
-  } catch (e) {
+    debugPrint('✓ Push notifications initialized');
+  } catch (e, stack) {
     // Firebase may fail on iOS simulator (no GoogleService-Info.plist in bundle)
     // or if Firebase is not configured. App continues without push notifications.
-    debugPrint('Push notification init failed (non-fatal): $e');
+    debugPrint('✗ Push notification init failed: $e');
+    debugPrint(stack.toString());
   }
 
   runApp(

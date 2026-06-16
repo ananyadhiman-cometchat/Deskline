@@ -50,7 +50,7 @@ class AdminApiService {
 
   Future<Response> getUsers({
     int page = 1,
-    int pageSize = 20,
+    int limit = 20,
     String? role,
     String? department,
     String? isActive,
@@ -58,7 +58,7 @@ class AdminApiService {
   }) {
     final params = <String, dynamic>{
       'page': page,
-      'pageSize': pageSize,
+      'limit': limit,
     };
     if (role != null) params['role'] = role;
     if (department != null) params['department'] = department;

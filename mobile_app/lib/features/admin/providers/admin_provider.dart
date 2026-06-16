@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/networking/dio_provider.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/services/environment_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../data/admin_repository.dart';
 import '../data/api_admin_repository.dart';
 import '../data/api_user_repository.dart';
@@ -28,8 +29,11 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
   return MockUserRepository();
 });
 
-// User list provider
+// User list provider — watches auth to re-fetch on login
 final usersProvider = FutureProvider<List<User>>((ref) async {
+  final auth = ref.watch(authStateProvider);
+  if (!auth.isAuthenticated) return [];
+
   final repository = ref.watch(userRepositoryProvider);
   final response = await repository.getUsers(pageSize: 100);
   return response.data;

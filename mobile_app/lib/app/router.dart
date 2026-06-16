@@ -232,6 +232,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/admin/tickets/:id',
+            pageBuilder: (context, state) => FadeSlideTransitionPage(
+              child: TicketDetailScreen(
+                ticketId: state.pathParameters['id']!,
+              ),
+            ),
+          ),
+          GoRoute(
             path: '/admin/users',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: UserManagementScreen(),

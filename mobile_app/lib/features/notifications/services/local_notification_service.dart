@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Handles displaying notifications in the system tray.
@@ -16,8 +18,8 @@ class LocalNotificationService {
 
   /// Initialize the plugin. Call once at app startup.
   static Future<void> initialize() async {
-    // Android initialization
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Android initialization — resource name only (no @drawable/ prefix)
+    const androidSettings = AndroidInitializationSettings('ic_notification');
 
     // iOS initialization
     const iosSettings = DarwinInitializationSettings(
@@ -61,7 +63,8 @@ class LocalNotificationService {
       channelDescription: _androidChannel.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_notification',
+      color: const Color(0xFFFF4655),
     );
 
     const iosDetails = DarwinNotificationDetails(

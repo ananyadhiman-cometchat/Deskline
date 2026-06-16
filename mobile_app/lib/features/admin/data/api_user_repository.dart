@@ -21,18 +21,29 @@ class ApiUserRepository implements UserRepository {
   }) async {
     final response = await _apiService.getUsers(
       page: page,
-      pageSize: pageSize,
+      limit: pageSize,
       role: role != null ? _roleToString(role) : null,
       department: department != null ? _departmentToString(department) : null,
       isActive: isActive?.toString(),
       search: search,
     );
 
-    // Backend returns { data: [...], meta: { total, page, pageSize, ... } }
+    // Backend returns { data: [...], meta: { page, limit, total, totalPages } }
+    // Note: meta uses 'limit' not 'pageSize' for this endpoint
     final json = response.data as Map<String, dynamic>;
-    return PaginatedResponse.fromJson(
-      json,
-      (item) => User.fromJson(item),
+    final dataList = json['data'] as List<dynamic>;
+    final meta = json['meta'] as Map<String, dynamic>;
+
+    return PaginatedResponse(
+      data: dataList
+          .map((item) => User.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      meta: PaginationMeta(
+        total: (meta['total'] as num?)?.toInt() ?? 0,
+        page: (meta['page'] as num?)?.toInt() ?? page,
+        pageSize: (meta['limit'] as num?)?.toInt() ?? pageSize,
+        totalPages: (meta['totalPages'] as num?)?.toInt(),
+      ),
     );
   }
 

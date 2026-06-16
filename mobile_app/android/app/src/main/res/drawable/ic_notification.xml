@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        DeskLine "D" notification icon.
+        IMPORTANT: Android notification icons MUST be monochrome white silhouettes.
+        Only alpha channel is used; the system applies the tint color set via meta-data.
+    -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,3.5h7.5c4.7,0 8.5,3.8 8.5,8.5s-3.8,8.5 -8.5,8.5H5V3.5zM9,7v10h3.5c2.8,0 5,-2.2 5,-5s-2.2,-5 -5,-5H9z"/>
+</vector>
+</vector>
