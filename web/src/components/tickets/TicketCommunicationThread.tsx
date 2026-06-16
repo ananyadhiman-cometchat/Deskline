@@ -19,8 +19,9 @@ export function TicketCommunicationThread({ ticket }: Props) {
   const [newComment, setNewComment] = useState('');
 
   const handleSend = () => {
-    if (!newComment.trim()) return;
-    addCommentMutation.mutate(newComment, {
+    const trimmed = newComment.trim();
+    if (!trimmed) return;
+    addCommentMutation.mutate(trimmed, {
       onSuccess: () => setNewComment(''),
     });
   };

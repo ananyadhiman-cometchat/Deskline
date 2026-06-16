@@ -150,17 +150,19 @@ async function appendActivityLog(
 async function notifyTicketOwnerUpdate(input: {
   actorId: string;
   ticketId: string;
+  ticketTitle: string;
   recipientId: string;
   oldStatus: TicketStatus;
   newStatus: TicketStatus;
 }) {
+  const statusLabel = input.newStatus.replace('_', ' ');
   try {
     return await createNotification(prisma, {
       actorId: input.actorId,
       userId: input.recipientId,
       type: NotificationType.ticket_update,
-      title: `Ticket #${input.ticketId} updated`,
-      body: `Your ticket is now ${input.newStatus.replace('_', ' ')}.`,
+      title: `"${input.ticketTitle}" updated`,
+      body: `Your ticket is now ${statusLabel}.`,
       metadata: {
         ticketId: input.ticketId,
         oldStatus: input.oldStatus,
@@ -302,7 +304,7 @@ async function createTicketWithRouting(input: {
       actorId: input.actorId,
       userId: input.actorId,
       type: NotificationType.ticket_update,
-      title: `AI reply for ticket #${ticket.id}`,
+      title: `AI reply for "${ticket.title}"`,
       body: `An AI assistant replied to your ${input.category} ticket.`,
       metadata: {
         ticketId: ticket.id,
@@ -328,7 +330,7 @@ async function createTicketWithRouting(input: {
       recipientId: assignee.id,
       recipientType: notificationType,
       title: `New ticket assigned: ${ticket.title}`,
-      body: `Ticket #${ticket.id} needs attention.`
+      body: `A new ${input.category} ticket needs your attention.`
     });
 
     return ticket;
@@ -339,7 +341,7 @@ async function createTicketWithRouting(input: {
     ticketId: ticket.id,
     department,
     title: `Unassigned ticket in ${department}`,
-    body: `Ticket #${ticket.id} is waiting for assignment.`
+    body: `"${ticket.title}" is waiting for assignment.`
   });
 
   return ticket;
@@ -477,7 +479,7 @@ async function updateTicketAssignee(actor: TicketActor, ticketId: string, agentI
     userId: agentId,
     type: NotificationType.assignment,
     title: `Ticket assigned: ${ticket.title}`,
-    body: `You have been assigned ticket #${ticket.id}.`,
+    body: `You have been assigned to "${ticket.title}".`,
     metadata: {
       ticketId: ticket.id,
       previousAgentId: ticket.agentId
@@ -543,13 +545,14 @@ async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
       recipientId: supervisor.id,
       recipientType: NotificationType.escalation,
       title: `Escalated ticket assigned: ${ticket.title}`,
-      body: `Ticket #${ticket.id} has been escalated to you.`
+      body: `"${ticket.title}" has been escalated to you.`
     });
   }
 
   await notifyTicketOwnerUpdate({
     actorId: actor.id,
     ticketId: ticket.id,
+    ticketTitle: ticket.title,
     recipientId: ticket.employeeId,
     oldStatus: ticket.status,
     newStatus: TicketStatus.escalated
@@ -651,6 +654,7 @@ async function updateTicketStatus(actor: TicketActor, ticketId: string, status: 
   await notifyTicketOwnerUpdate({
     actorId: actor.id,
     ticketId: ticket.id,
+    ticketTitle: ticket.title,
     recipientId: ticket.employeeId,
     oldStatus: ticket.status,
     newStatus: status
@@ -764,7 +768,7 @@ export async function requestHumanHelp(actor: TicketActor, ticketId: string) {
       recipientId: assignee.id,
       recipientType: NotificationType.assignment,
       title: `Human help requested: ${ticket.title}`,
-      body: `Employee requested human assistance for ticket #${ticket.id}.`
+      body: `An employee requested human assistance for "${ticket.title}".`
     });
   }
 
@@ -799,7 +803,7 @@ export async function confirmResolution(actor: TicketActor, ticketId: string) {
     userId: ticket.employeeId,
     type: NotificationType.ticket_update,
     title: 'Ticket Closed',
-    body: `Ticket #${ticket.id} has been closed after your resolution confirmation.`,
+    body: `"${ticket.title}" has been closed after your confirmation.`,
     metadata: { ticketId: ticket.id }
   });
 
@@ -809,7 +813,7 @@ export async function confirmResolution(actor: TicketActor, ticketId: string) {
       userId: ticket.agentId,
       type: NotificationType.ticket_update,
       title: 'Resolution Accepted',
-      body: `Employee accepted the resolution for ticket #${ticket.id}.`,
+      body: `The employee accepted your resolution for "${ticket.title}".`,
       metadata: { ticketId: ticket.id }
     });
   }
@@ -848,7 +852,7 @@ export async function rejectResolution(actor: TicketActor, ticketId: string) {
       userId: ticket.agentId,
       type: NotificationType.ticket_update,
       title: 'Ticket Reopened',
-      body: `Employee rejected the resolution for ticket #${ticket.id}.`,
+      body: `The employee rejected your resolution for "${ticket.title}".`,
       metadata: {
         ticketId: ticket.id,
         status: updatedTicket.status

@@ -36,6 +36,7 @@ export async function listTicketComments(actorId: string, actorRole: UserRole, t
 export async function createTicketComment(actorId: string, actorRole: UserRole, ticketId: string, body: string) {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },
+    select: { id: true, title: true, employeeId: true, agentId: true, status: true }
   });
 
   if (!ticket) {
@@ -70,8 +71,8 @@ export async function createTicketComment(actorId: string, actorRole: UserRole, 
       actorId,
       userId: ticket.agentId,
       type: NotificationType.ticket_update,
-      title: `New reply on Ticket #${ticket.id.slice(0, 8)}`,
-      body: `Employee added a new comment.`,
+      title: `New reply on "${ticket.title}"`,
+      body: `${comment.user.name} replied to the ticket.`,
       metadata: { ticketId }
     });
   } else if ((actorRole === UserRole.agent || actorRole === UserRole.supervisor || actorRole === UserRole.admin) && ticket.employeeId !== actorId) {
@@ -79,8 +80,8 @@ export async function createTicketComment(actorId: string, actorRole: UserRole, 
       actorId,
       userId: ticket.employeeId,
       type: NotificationType.ticket_update,
-      title: `Agent replied to Ticket #${ticket.id.slice(0, 8)}`,
-      body: `An agent added a new comment.`,
+      title: `New reply on "${ticket.title}"`,
+      body: `${comment.user.name} replied to your ticket.`,
       metadata: { ticketId }
     });
   }
