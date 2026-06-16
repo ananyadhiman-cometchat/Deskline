@@ -1,6 +1,6 @@
 # DeskLine — Staging Deployment
 
-Target: `deskline-cometchat-staging.com`
+Target: `deskline.cometchat-staging.com`
 Architecture: **Client → ALB (TLS) → host nginx (:80) → docker containers (127.0.0.1)**
 
 ```
@@ -63,7 +63,7 @@ openssl rand -hex 64   # JWT_REFRESH_SECRET
 ## 3. Install host nginx vhost
 
 ```bash
-sudo cp deploy/nginx/deskline-cometchat-staging.conf /etc/nginx/conf.d/
+sudo cp deploy/nginx/deskline.cometchat-staging.conf /etc/nginx/conf.d/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -88,7 +88,7 @@ Smoke test from the host:
 
 ```bash
 curl -s http://127.0.0.1:4000/api/health
-curl -s -H 'Host: deskline-cometchat-staging.com' http://127.0.0.1/api/health
+curl -s -H 'Host: deskline.cometchat-staging.com' http://127.0.0.1/api/health
 ```
 
 Both should return `{"status":"ok","service":"DeskLine API"}`.
@@ -96,22 +96,22 @@ Both should return `{"status":"ok","service":"DeskLine API"}`.
 ## 5. ALB + DNS
 
 - **Target group**: HTTP, port `80`, health check path `/api/health`, success codes `200`.
-- **Listener**: HTTPS :443 with the ACM cert for `deskline-cometchat-staging.com`, default action forward to the target group. Add an HTTP :80 listener that redirects to HTTPS.
+- **Listener**: HTTPS :443 with the ACM cert for `deskline.cometchat-staging.com`, default action forward to the target group. Add an HTTP :80 listener that redirects to HTTPS.
 - **Security group**: ALB allows :443 (and :80) from `0.0.0.0/0`; instance SG allows :80 only from the ALB SG.
-- **DNS**: Route 53 (or your provider) A/ALIAS record `deskline-cometchat-staging.com` → ALB DNS name.
+- **DNS**: Route 53 (or your provider) A/ALIAS record `deskline.cometchat-staging.com` → ALB DNS name.
 
 ## 6. Verify end-to-end
 
 ```bash
-curl -i https://deskline-cometchat-staging.com/api/health
+curl -i https://deskline.cometchat-staging.com/api/health
 # Expect 200 and {"status":"ok",...}
 
 # SPA loads
-curl -I https://deskline-cometchat-staging.com/
+curl -I https://deskline.cometchat-staging.com/
 # Expect 200, Content-Type: text/html
 ```
 
-Open `https://deskline-cometchat-staging.com/` in a browser, log in with a seeded user, and confirm `/api/auth/login` works in the network tab.
+Open `https://deskline.cometchat-staging.com/` in a browser, log in with a seeded user, and confirm `/api/auth/login` works in the network tab.
 
 ---
 
