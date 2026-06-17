@@ -1,4 +1,4 @@
-# Production / staging compose for deskline-cometchat-staging.com.
+# Production / staging compose for deskline.cometchat-staging.com.
 # Architecture: ALB (TLS) -> host nginx (:80) -> these containers (bound to 127.0.0.1).
 #
 # Usage on the server:

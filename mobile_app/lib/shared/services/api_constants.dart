@@ -4,7 +4,7 @@
 export '../../../core/networking/api_endpoints.dart';
 
 class ApiConstants {
-  static const String baseUrl = 'http://10.0.2.2:4000/api';
+  static const String baseUrl = 'https://deskline.cometchat-staging.com/api';
   static const String tickets = '/tickets';
   static const String auth = '/auth';
 }

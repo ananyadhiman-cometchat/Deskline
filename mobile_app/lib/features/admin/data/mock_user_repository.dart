@@ -78,11 +78,38 @@ class MockUserRepository implements UserRepository {
   }
 
   @override
+  Future<User> createUser({
+    required String name,
+    required String email,
+    required String password,
+    required UserRole role,
+    required Department department,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final user = User(
+      id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      email: email,
+      role: role,
+      department: department,
+      isActive: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _users.insert(0, user);
+    return user;
+  }
+
+  @override
   Future<User> updateUser({
     required String id,
     String? name,
+    String? email,
+    String? password,
     UserRole? role,
     Department? department,
+    bool? isActive,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
 
@@ -91,8 +118,10 @@ class MockUserRepository implements UserRepository {
 
     final updated = _users[index].copyWith(
       name: name ?? _users[index].name,
+      email: email ?? _users[index].email,
       role: role ?? _users[index].role,
       department: department ?? _users[index].department,
+      isActive: isActive ?? _users[index].isActive,
       updatedAt: DateTime.now(),
     );
     _users[index] = updated;

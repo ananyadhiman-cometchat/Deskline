@@ -1,18 +1,11 @@
-import 'dart:io' show Platform;
-
 /// API endpoint URL constants for the DeskLine backend.
 /// Single source of truth for all endpoint paths.
 class ApiEndpoints {
   const ApiEndpoints._();
 
-  /// Base URL adapts per platform:
-  /// - Android emulator: 10.0.2.2 (host machine alias)
-  /// - iOS simulator / physical device: localhost
+  /// Production base URL pointing to the deployed staging server.
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:4000/api';
-    }
-    return 'http://localhost:4000/api';
+    return 'https://deskline.cometchat-staging.com/api';
   }
 
   // Auth

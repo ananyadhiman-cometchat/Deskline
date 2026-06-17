@@ -5,6 +5,8 @@ import '../../../core/theme/color_scheme.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../shared/enums/enums.dart';
+import '../../../shared/models/models.dart';
 import '../providers/admin_provider.dart';
 
 class UserManagementScreen extends ConsumerWidget {
@@ -30,7 +32,7 @@ class UserManagementScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // Action buttons — wrapped to avoid overflow
+          // Action buttons
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
@@ -38,41 +40,13 @@ class UserManagementScreen extends ConsumerWidget {
               SizedBox(
                 height: 36,
                 child: ElevatedButton.icon(
-                  onPressed: () => _showDialog(context, 'Create User', 'Create user form ready for repository wiring.'),
+                  onPressed: () => _showCreateUserDialog(context, ref),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('CREATE'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                    textStyle: AppTypography.badge,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 36,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showDialog(context, 'Edit User', 'Select a user to edit.'),
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: const Text('EDIT'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.textPrimary,
-                    side: BorderSide(color: colors.borderColor, width: 1),
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                    textStyle: AppTypography.badge,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 36,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showDialog(context, 'Deactivate', 'Are you sure?'),
-                  icon: const Icon(Icons.block, size: 16),
-                  label: const Text('DEACTIVATE'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.errorRed,
-                    side: const BorderSide(color: AppColors.errorRed, width: 1),
                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                     textStyle: AppTypography.badge,
                   ),
@@ -85,9 +59,9 @@ class UserManagementScreen extends ConsumerWidget {
           const SectionHeader(title: 'ALL USERS'),
           const SizedBox(height: AppSpacing.sm),
 
-          // User list as styled cards — tap to manage
+          // User list
           ...data.map((user) => GestureDetector(
-            onTap: () => _showUserActions(context, user, colors),
+            onTap: () => _showUserActions(context, ref, user),
             child: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -97,7 +71,6 @@ class UserManagementScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  // Avatar
                   Container(
                     width: 36,
                     height: 36,
@@ -113,7 +86,6 @@ class UserManagementScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  // Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +104,6 @@ class UserManagementScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  // Role badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -145,7 +116,6 @@ class UserManagementScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  // Active indicator
                   Container(
                     width: 8,
                     height: 8,
@@ -182,26 +152,126 @@ class UserManagementScreen extends ConsumerWidget {
     );
   }
 
-  void _showDialog(BuildContext context, String title, String content) {
+  // ── Create User Dialog ──────────────────────────────────────────
+
+  void _showCreateUserDialog(BuildContext context, WidgetRef ref) {
     final colors = DesklineColors.of(context);
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    UserRole selectedRole = UserRole.employee;
+    Department selectedDepartment = Department.general;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.cardBackground,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        title: Text(title, style: AppTypography.cardTitle.copyWith(color: colors.textPrimary)),
-        content: Text(content, style: AppTypography.bodySmall.copyWith(color: colors.textMuted)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('CLOSE', style: AppTypography.badge.copyWith(color: AppColors.primaryRed)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: colors.cardBackground,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: Text('CREATE USER', style: AppTypography.cardTitle.copyWith(color: colors.textPrimary)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTextField(nameController, 'Full Name', colors),
+                const SizedBox(height: AppSpacing.sm),
+                _buildTextField(emailController, 'Email', colors, keyboardType: TextInputType.emailAddress),
+                const SizedBox(height: AppSpacing.sm),
+                _buildTextField(passwordController, 'Password', colors, obscure: true),
+                const SizedBox(height: AppSpacing.sm),
+                _buildDropdown<UserRole>(
+                  label: 'Role',
+                  value: selectedRole,
+                  items: UserRole.values,
+                  colors: colors,
+                  onChanged: (v) => setState(() => selectedRole = v!),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildDropdown<Department>(
+                  label: 'Department',
+                  value: selectedDepartment,
+                  items: Department.values,
+                  colors: colors,
+                  onChanged: (v) => setState(() => selectedDepartment = v!),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('CANCEL', style: AppTypography.badge.copyWith(color: colors.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty || emailController.text.isEmpty || passwordController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All fields are required')),
+                  );
+                  return;
+                }
+                Navigator.of(ctx).pop();
+                await _createUser(
+                  context,
+                  ref,
+                  name: nameController.text.trim(),
+                  email: emailController.text.trim(),
+                  password: passwordController.text,
+                  role: selectedRole,
+                  department: selectedDepartment,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              child: const Text('CREATE'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showUserActions(BuildContext context, dynamic user, DesklineColors colors) {
+  Future<void> _createUser(
+    BuildContext context,
+    WidgetRef ref, {
+    required String name,
+    required String email,
+    required String password,
+    required UserRole role,
+    required Department department,
+  }) async {
+    try {
+      final repository = ref.read(userRepositoryProvider);
+      await repository.createUser(
+        name: name,
+        email: email,
+        password: password,
+        role: role,
+        department: department,
+      );
+      ref.invalidate(usersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User "$name" created successfully')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create user: $e')),
+        );
+      }
+    }
+  }
+
+  // ── User Actions Bottom Sheet ───────────────────────────────────
+
+  void _showUserActions(BuildContext context, WidgetRef ref, User user) {
+    final colors = DesklineColors.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.cardBackground,
@@ -218,11 +288,11 @@ class UserManagementScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.name.toString().toUpperCase(),
+                      user.name.toUpperCase(),
                       style: AppTypography.cardTitle.copyWith(color: colors.textPrimary),
                     ),
                     Text(
-                      user.email.toString(),
+                      user.email,
                       style: AppTypography.caption.copyWith(color: colors.textMuted),
                     ),
                   ],
@@ -231,11 +301,11 @@ class UserManagementScreen extends ConsumerWidget {
               Divider(height: 1, color: colors.borderColor),
               _actionTile(ctx, Icons.edit_outlined, 'EDIT USER', colors, () {
                 Navigator.pop(ctx);
-                _showDialog(context, 'Edit ${user.name}', 'Edit form ready for repository wiring.');
+                _showEditUserDialog(context, ref, user);
               }),
               _actionTile(ctx, Icons.swap_horiz, 'CHANGE ROLE', colors, () {
                 Navigator.pop(ctx);
-                _showDialog(context, 'Change Role', 'Role change for ${user.name} ready for repository wiring.');
+                _showChangeRoleDialog(context, ref, user);
               }),
               _actionTile(
                 ctx,
@@ -244,11 +314,11 @@ class UserManagementScreen extends ConsumerWidget {
                 colors,
                 () {
                   Navigator.pop(ctx);
-                  _showDialog(
-                    context,
-                    user.isActive ? 'Deactivate ${user.name}?' : 'Reactivate ${user.name}?',
-                    'This action will be connected to the repository.',
-                  );
+                  if (user.isActive) {
+                    _showDeactivateConfirmation(context, ref, user);
+                  } else {
+                    _reactivateUser(context, ref, user);
+                  }
                 },
                 isDestructive: user.isActive,
               ),
@@ -256,6 +326,319 @@ class UserManagementScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  // ── Edit User Dialog ────────────────────────────────────────────
+
+  void _showEditUserDialog(BuildContext context, WidgetRef ref, User user) {
+    final colors = DesklineColors.of(context);
+    final nameController = TextEditingController(text: user.name);
+    final emailController = TextEditingController(text: user.email);
+    Department selectedDepartment = user.department;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: colors.cardBackground,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: Text('EDIT USER', style: AppTypography.cardTitle.copyWith(color: colors.textPrimary)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTextField(nameController, 'Full Name', colors),
+                const SizedBox(height: AppSpacing.sm),
+                _buildTextField(emailController, 'Email', colors, keyboardType: TextInputType.emailAddress),
+                const SizedBox(height: AppSpacing.sm),
+                _buildDropdown<Department>(
+                  label: 'Department',
+                  value: selectedDepartment,
+                  items: Department.values,
+                  colors: colors,
+                  onChanged: (v) => setState(() => selectedDepartment = v!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('CANCEL', style: AppTypography.badge.copyWith(color: colors.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await _updateUser(
+                  context,
+                  ref,
+                  user: user,
+                  name: nameController.text.trim(),
+                  email: emailController.text.trim(),
+                  department: selectedDepartment,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              child: const Text('SAVE'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateUser(
+    BuildContext context,
+    WidgetRef ref, {
+    required User user,
+    required String name,
+    required String email,
+    required Department department,
+  }) async {
+    try {
+      final repository = ref.read(userRepositoryProvider);
+      await repository.updateUser(
+        id: user.id,
+        name: name != user.name ? name : null,
+        email: email != user.email ? email : null,
+        department: department != user.department ? department : null,
+      );
+      ref.invalidate(usersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User "${name}" updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update user: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Change Role Dialog ──────────────────────────────────────────
+
+  void _showChangeRoleDialog(BuildContext context, WidgetRef ref, User user) {
+    final colors = DesklineColors.of(context);
+    UserRole selectedRole = user.role;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: colors.cardBackground,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: Text('CHANGE ROLE', style: AppTypography.cardTitle.copyWith(color: colors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Changing role for ${user.name}',
+                style: AppTypography.bodySmall.copyWith(color: colors.textMuted),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _buildDropdown<UserRole>(
+                label: 'Role',
+                value: selectedRole,
+                items: UserRole.values,
+                colors: colors,
+                onChanged: (v) => setState(() => selectedRole = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('CANCEL', style: AppTypography.badge.copyWith(color: colors.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: selectedRole == user.role
+                  ? null
+                  : () async {
+                      Navigator.of(ctx).pop();
+                      await _changeRole(context, ref, user, selectedRole);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              child: const Text('CHANGE'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _changeRole(BuildContext context, WidgetRef ref, User user, UserRole newRole) async {
+    try {
+      final repository = ref.read(userRepositoryProvider);
+      await repository.updateUser(id: user.id, role: newRole);
+      ref.invalidate(usersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${user.name} role changed to ${newRole.name}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to change role: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Deactivate Confirmation ─────────────────────────────────────
+
+  void _showDeactivateConfirmation(BuildContext context, WidgetRef ref, User user) {
+    final colors = DesklineColors.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.cardBackground,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text('DEACTIVATE USER', style: AppTypography.cardTitle.copyWith(color: AppColors.errorRed)),
+        content: Text(
+          'Are you sure you want to deactivate ${user.name}?\n\nThis will revoke their access and log them out of all sessions.',
+          style: AppTypography.bodySmall.copyWith(color: colors.textPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('CANCEL', style: AppTypography.badge.copyWith(color: colors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _deactivateUser(context, ref, user);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorRed,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            ),
+            child: const Text('DEACTIVATE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deactivateUser(BuildContext context, WidgetRef ref, User user) async {
+    try {
+      final repository = ref.read(userRepositoryProvider);
+      await repository.deactivateUser(user.id);
+      ref.invalidate(usersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${user.name} has been deactivated')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to deactivate user: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Reactivate User ─────────────────────────────────────────────
+
+  Future<void> _reactivateUser(BuildContext context, WidgetRef ref, User user) async {
+    try {
+      final repository = ref.read(userRepositoryProvider);
+      await repository.updateUser(id: user.id, isActive: true);
+      ref.invalidate(usersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${user.name} has been reactivated')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reactivate user: $e')),
+        );
+      }
+    }
+  }
+
+  // ── UI Helpers ──────────────────────────────────────────────────
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    DesklineColors colors, {
+    TextInputType? keyboardType,
+    bool obscure = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure,
+      style: AppTypography.bodySmall.copyWith(color: colors.textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: AppTypography.caption.copyWith(color: colors.textMuted),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: colors.borderColor),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: AppColors.primaryRed),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T extends Enum>({
+    required String label,
+    required T value,
+    required List<T> items,
+    required DesklineColors colors,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: AppTypography.caption.copyWith(color: colors.textMuted),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: colors.borderColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: colors.cardBackground,
+          style: AppTypography.bodySmall.copyWith(color: colors.textPrimary),
+          items: items.map((item) {
+            return DropdownMenuItem<T>(
+              value: item,
+              child: Text(item.name.toUpperCase()),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 
