@@ -14,34 +14,40 @@ export function useFirebaseMessaging() {
   useEffect(() => {
     if (!isAuthenticated || !user || !messaging) return;
 
-    const requestPermissionAndGetToken = async () => {
+    const registerTokenIfGranted = async () => {
       try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-          if (!vapidKey) {
-            console.warn('VITE_FIREBASE_VAPID_KEY is missing. Cannot generate FCM token.');
-            return;
-          }
+        // Only get token if permission was already granted (by the toast or previously)
+        if (Notification.permission !== 'granted') return;
 
-          const token = await getToken(messaging!, { vapidKey });
-          
-          if (token) {
-            setFcmToken(token);
-            // Send token to backend
-            await api.patch('/api/users/me/fcm-token', { fcmToken: token }).catch(console.error);
-          } else {
-            console.log('No registration token available. Request permission to generate one.');
-          }
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+        if (!vapidKey) {
+          console.warn('VITE_FIREBASE_VAPID_KEY is missing. Cannot generate FCM token.');
+          return;
+        }
+
+        const token = await getToken(messaging!, { vapidKey });
+        
+        if (token) {
+          setFcmToken(token);
+          // Send token to backend
+          await api.patch('/api/users/me/fcm-token', { fcmToken: token }).catch(console.error);
         } else {
-          console.log('Unable to get permission to notify.');
+          console.log('No registration token available.');
         }
       } catch (error) {
         console.error('An error occurred while retrieving token. ', error);
       }
     };
 
-    requestPermissionAndGetToken();
+    registerTokenIfGranted();
+
+    // Re-check when permission changes (e.g., user clicks Enable in the toast)
+    const interval = setInterval(() => {
+      if (Notification.permission === 'granted' && !fcmToken) {
+        registerTokenIfGranted();
+        clearInterval(interval);
+      }
+    }, 2000);
 
     // Listen for foreground messages
     const unsubscribe = onMessage(messaging!, (payload) => {
@@ -62,6 +68,7 @@ export function useFirebaseMessaging() {
 
     return () => {
       unsubscribe();
+      clearInterval(interval);
     };
   }, [isAuthenticated, user?.id]); // Re-run if user logs in as someone else
 

@@ -25,4 +25,10 @@ abstract class AdminRepository {
   Future<TicketAnalytics> getTicketAnalytics();
 
   Future<List<AgentWorkload>> getAgentWorkload();
+
+  Future<int> sendAnnouncement({
+    required String title,
+    required String body,
+    String? targetRole,
+  });
 }

@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,9 +10,34 @@ import 'notification_api_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  // Background messages with `notification` payload are auto-displayed by FCM.
-  // No additional handling needed here.
+  await _ensureFirebaseInitialized();
+}
+
+/// Firebase options derived from GoogleService-Info.plist / google-services.json
+FirebaseOptions get firebaseOptions {
+  if (Platform.isIOS) {
+    return const FirebaseOptions(
+      apiKey: 'AIzaSyCU9mRpSU-mGEl3HEoZUF-k2voNvzU-LjA',
+      appId: '1:295880840179:ios:ab3b24444407b844c8b886',
+      messagingSenderId: '295880840179',
+      projectId: 'deskline-81719',
+      storageBucket: 'deskline-81719.firebasestorage.app',
+      iosBundleId: 'com.cometchat.interns',
+    );
+  }
+  return const FirebaseOptions(
+    apiKey: 'AIzaSyDkrfahHrRlxBv1n5sp_u1N-lXIhm-U_og',
+    appId: '1:295880840179:android:60f3292de667cc77c8b886',
+    messagingSenderId: '295880840179',
+    projectId: 'deskline-81719',
+    storageBucket: 'deskline-81719.firebasestorage.app',
+  );
+}
+
+Future<void> _ensureFirebaseInitialized() async {
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: firebaseOptions);
+  }
 }
 
 class PushNotificationService {
@@ -22,12 +49,23 @@ class PushNotificationService {
   /// FCM token registration to backend is deferred — call [registerToken]
   /// after the user is authenticated and DioClient is available.
   static Future<void> initialize() async {
-    await Firebase.initializeApp();
-    await FirebaseMessaging.instance.requestPermission(
+    // Firebase.initializeApp() is called in main() before this
+    await _ensureFirebaseInitialized();
+    
+    final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    debugPrint('🔔 Notification permission status: ${settings.authorizationStatus}');
+
+    // Get and print APNs token (iOS only)
+    final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+    debugPrint('🍎 APNs token: $apnsToken');
+
+    // Get and print FCM token
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    debugPrint('🔥 FCM token: $fcmToken');
 
     // Initialize local notification plugin for foreground display
     await LocalNotificationService.initialize();
@@ -82,14 +120,26 @@ class PushNotificationService {
   /// Register device FCM token with the backend.
   /// Should be called after successful login when DioClient is available.
   static Future<void> registerToken(DioClient dioClient) async {
-    final token = await getDeviceToken();
-    if (token != null) {
-      try {
+    try {
+      await _ensureFirebaseInitialized();
+
+      final token = await getDeviceToken();
+      if (token != null) {
         await NotificationApiService(dioClient).registerFcmToken(token);
-        debugPrint('FCM token registered with backend');
-      } catch (e) {
-        debugPrint('FCM token registration failed: $e');
+        debugPrint('FCM token registered with backend: $token');
+      } else {
+        debugPrint('FCM token is null — APNs token may not be ready yet. Retrying in 5s...');
+        await Future.delayed(const Duration(seconds: 5));
+        final retryToken = await getDeviceToken();
+        if (retryToken != null) {
+          await NotificationApiService(dioClient).registerFcmToken(retryToken);
+          debugPrint('FCM token registered with backend (retry): $retryToken');
+        } else {
+          debugPrint('FCM token still null after retry. Push notifications will not work.');
+        }
       }
+    } catch (e) {
+      debugPrint('FCM token registration failed: $e');
     }
   }
 

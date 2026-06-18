@@ -27,13 +27,19 @@ function Toast() {
 }
 
 import { useFirebaseMessaging } from './hooks/useFirebaseMessaging'
+import { NotificationPermissionToast } from './components/NotificationPermissionToast'
 
 function AppRoot() {
   // Global auth rehydration trigger
   useMe()
   useFirebaseMessaging()
 
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <NotificationPermissionToast />
+      <RouterProvider router={router} />
+    </>
+  )
 }
 
 export function App() {

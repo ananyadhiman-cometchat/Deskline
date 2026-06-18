@@ -25,6 +25,7 @@ import '../features/admin/presentation/user_management_screen.dart';
 import '../features/admin/presentation/activity_logs_screen.dart';
 import '../features/admin/presentation/notification_logs_screen.dart';
 import '../features/admin/presentation/analytics_screen.dart';
+import '../features/admin/presentation/send_announcement_screen.dart';
 import '../shared/enums/enums.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -261,6 +262,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/admin/analytics',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: AnalyticsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/announcements',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SendAnnouncementScreen(),
             ),
           ),
         ],

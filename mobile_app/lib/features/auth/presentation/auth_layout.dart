@@ -151,7 +151,8 @@ class AuthLogo extends StatelessWidget {
 
 /// Dark-themed text field for auth screens.
 /// Transparent dark background, white text, lighter border, red focus.
-class AuthTextField extends StatelessWidget {
+/// Supports password visibility toggle when [obscureText] is true.
+class AuthTextField extends StatefulWidget {
   final String label;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
@@ -170,32 +171,64 @@ class AuthTextField extends StatelessWidget {
   });
 
   @override
+  State<AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<AuthTextField> {
+  late bool _obscured;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscured = widget.obscureText;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label.toUpperCase(),
+          widget.label.toUpperCase(),
           style: AppTypography.formLabel.copyWith(
             color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller,
-          validator: validator,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
+          controller: widget.controller,
+          validator: widget.validator,
+          keyboardType: widget.keyboardType,
+          obscureText: _obscured,
           style: AppTypography.bodySmall.copyWith(color: Colors.white),
           cursorColor: AppColors.primaryRed,
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: widget.hintText,
             hintStyle: AppTypography.bodySmall.copyWith(
               color: Colors.white.withValues(alpha: 0.3),
             ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.07),
+            suffixIcon: widget.obscureText
+                ? GestureDetector(
+                    onTap: () => setState(() => _obscured = !_obscured),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Icon(
+                        _obscured
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: Colors.white.withValues(alpha: 0.4),
+                        size: 20,
+                      ),
+                    ),
+                  )
+                : null,
+            suffixIconConstraints: const BoxConstraints(
+              minHeight: 20,
+              minWidth: 40,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
               borderSide: BorderSide(

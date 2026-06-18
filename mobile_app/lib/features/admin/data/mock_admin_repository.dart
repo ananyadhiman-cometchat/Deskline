@@ -121,6 +121,16 @@ class MockAdminRepository implements AdminRepository {
     ];
   }
 
+  @override
+  Future<int> sendAnnouncement({
+    required String title,
+    required String body,
+    String? targetRole,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return 42; // Mock recipient count
+  }
+
   static final _mockActivityLogs = [
     ActivityLog(
       id: 'log-001',

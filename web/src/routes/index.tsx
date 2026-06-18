@@ -23,6 +23,7 @@ const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage')
 const UserManagementPage = lazy(() => import('@/pages/admin/UserManagementPage'))
 const ActivityLogPage = lazy(() => import('@/pages/admin/ActivityLogPage'))
 const NotificationLogPage = lazy(() => import('@/pages/admin/NotificationLogPage'))
+const AnnouncementsPage = lazy(() => import('@/pages/admin/AnnouncementsPage'))
 
 function PageLoader() {
   return (
@@ -156,6 +157,14 @@ export const router = createBrowserRouter([
         element: (
           <AuthGuard allowedRoles={['admin']}>
             <S><NotificationLogPage /></S>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: '/admin/announcements',
+        element: (
+          <AuthGuard allowedRoles={['admin']}>
+            <S><AnnouncementsPage /></S>
           </AuthGuard>
         ),
       },

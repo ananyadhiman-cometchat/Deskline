@@ -1,21 +1,36 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { useUIStore } from '@/store/uiStore'
 import { useUnreadCount } from '@/hooks/useNotifications'
-import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon } from 'lucide-react'
+import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon, Megaphone } from 'lucide-react'
 import type { UserRole } from '@/types'
 
 // ============================================================
 // AppLayout — Shell for authenticated users
 // ============================================================
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
+
 export function AppLayout() {
   const { user } = useAuthStore()
   const { sidebarOpen, setSidebarOpen, toggleSidebar, theme, toggleTheme } = useUIStore()
   const unreadCount = useUnreadCount()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
+  const { mutate: logoutMutation } = useLogout()
+  // On desktop, sidebar is visible by default (sidebarOpen = true means visible)
+  // On mobile, sidebar is hidden by default (sidebarOpen = true means open/visible)
+  const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(true)
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -27,15 +42,22 @@ export function AppLayout() {
 
   if (!user) return null // Should be caught by AuthGuard
 
-  const { mutate: logoutMutation } = useLogout()
   const handleLogout = () => {
     logoutMutation()
+  }
+
+  const handleToggleSidebar = () => {
+    if (isMobile) {
+      toggleSidebar()
+    } else {
+      setDesktopSidebarVisible((prev) => !prev)
+    }
   }
 
   // Define navigation based on role
   const navItems: Array<{ label: string; to: string; icon: React.ReactNode; roles: UserRole[] }> = [
     { label: 'Dashboard', to: '/dashboard', icon: <Activity size={18} />, roles: ['employee'] },
-    { label: 'My Tickets', to: '/tickets', icon: <Ticket size={18} />, roles: ['employee'] }, // Need to make sure /tickets lists 'own' tickets for employee
+    { label: 'My Tickets', to: '/tickets', icon: <Ticket size={18} />, roles: ['employee'] },
     { label: 'Inbox', to: '/inbox', icon: <Inbox size={18} />, roles: ['agent'] },
     { label: 'My Metrics', to: '/agent/metrics', icon: <Activity size={18} />, roles: ['agent'] },
     { label: 'Supervisor Dashboard', to: '/supervisor/dashboard', icon: <Activity size={18} />, roles: ['supervisor'] },
@@ -45,20 +67,33 @@ export function AppLayout() {
     { label: 'Users', to: '/admin/users', icon: <Users size={18} />, roles: ['admin'] },
     { label: 'Activity Logs', to: '/admin/activity-logs', icon: <Activity size={18} />, roles: ['admin'] },
     { label: 'Notification Logs', to: '/admin/notification-logs', icon: <Bell size={18} />, roles: ['admin'] },
+    { label: 'Announcements', to: '/admin/announcements', icon: <Megaphone size={18} />, roles: ['admin'] },
   ]
 
   const visibleNavItems = navItems.filter(item => item.roles.includes(user.role))
+
+  // Sidebar class logic
+  const sidebarClass = [
+    'sidebar',
+    isMobile && sidebarOpen ? 'sidebar-open' : '',
+    !isMobile && !desktopSidebarVisible ? 'sidebar-hidden' : '',
+  ].filter(Boolean).join(' ')
+
+  const mainContentClass = [
+    'main-content',
+    !isMobile && !desktopSidebarVisible ? 'sidebar-hidden' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div className="app-shell">
       {/* Mobile Sidebar Overlay */}
       <div 
-        className={`sidebar-overlay ${sidebarOpen ? 'sidebar-overlay-visible' : ''}`}
+        className={`sidebar-overlay ${sidebarOpen && isMobile ? 'sidebar-overlay-visible' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
 
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside className={sidebarClass}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-text">
             DESK<span className="sidebar-logo-accent">LINE</span>
@@ -72,7 +107,7 @@ export function AppLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => { if (isMobile) setSidebarOpen(false) }}
             >
               {item.icon}
               {item.label}
@@ -84,13 +119,13 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="main-content">
+      <main className={mainContentClass}>
         {/* Topbar */}
         <header className="topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="topbar-left">
             <button 
               className="btn btn-ghost btn-sm" 
-              onClick={toggleSidebar}
+              onClick={handleToggleSidebar}
               style={{ display: 'flex', padding: '0 8px', borderColor: 'transparent' }}
               aria-label="Toggle Sidebar"
             >
@@ -125,7 +160,7 @@ export function AppLayout() {
               onClick={() => navigate('/profile')}
               style={{ padding: '0 12px' }}
             >
-              <UserIcon size={14} />
+              <UserIcon size={16} />
               {user.name.split(' ')[0]}
             </button>
 

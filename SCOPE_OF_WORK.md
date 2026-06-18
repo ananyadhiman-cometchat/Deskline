@@ -413,14 +413,97 @@ Once a ticket is escalated:
 
 ## Notification Flows
 
-### App-Originated
+All notifications funnel through `createNotification()` in the backend, which:
+1. Creates a record in the `notifications` database table
+2. Logs an `activity_log` entry (`notification_sent`)
+3. Fires an FCM push notification if the recipient has a stored `fcmToken`
 
-| Trigger               | Recipient        | Message                                    |
-|-----------------------|------------------|--------------------------------------------|
-| Ticket created        | Assigned Agent   | New ticket assigned: '[Title]'             |
-| Ticket status updated | Employee         | Your ticket #[ID] is now [Status]          |
-| Ticket escalated      | Supervisor       | Ticket #[ID] has been escalated to you     |
-| Admin announcement    | All / role group | [Announcement text]                        |
+### Notification Types (enum)
+
+| Type            | Description                                             |
+|-----------------|---------------------------------------------------------|
+| `ticket_update` | Status changes, resolutions, AI replies, comments       |
+| `assignment`    | Ticket assigned to agent/supervisor                     |
+| `escalation`    | Ticket escalated to supervisor                          |
+| `announcement`  | Admin broadcast messages                                |
+| `cometchat`     | CometChat-originated events (Step 2)                    |
+
+### App-Originated — Ticket Creation
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 1 | Information ticket → AI auto-reply           | Employee (ticket creator)         | `ticket_update` | AI replied to your ticket                    |
+| 2 | Action/Conversation ticket → agent assigned  | Assigned Agent                    | `assignment`    | New ticket assigned: "[Title]"               |
+| 3 | Escalation ticket → supervisor assigned      | Assigned Supervisor               | `escalation`    | Escalated ticket assigned: "[Title]"         |
+| 4 | No assignee found for ticket                 | All Supervisors in department     | `assignment`    | Unassigned ticket in your department         |
+
+### App-Originated — Ticket Status Changes
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 5 | Any status change                            | Employee (ticket owner)           | `ticket_update` | Your ticket is now [status]                  |
+| 6 | Agent marks ticket as resolved               | Employee                          | `ticket_update` | Please confirm whether your issue is resolved|
+
+### App-Originated — Ticket Escalation
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 7 | Agent/Supervisor escalates ticket            | Best-fit Supervisor               | `escalation`    | Ticket has been escalated to you             |
+| 8 | Ticket escalated                             | Employee (ticket owner)           | `ticket_update` | Your ticket is now escalated                 |
+
+### App-Originated — Ticket Assignment/Reassignment
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 9 | Supervisor/Admin assigns ticket              | New Assignee (Agent/Supervisor)   | `assignment`    | You have been assigned to "[Title]"          |
+
+### App-Originated — Resolution Confirmation Flow
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 10| Employee confirms resolution                 | Employee                          | `ticket_update` | Ticket closed after your confirmation        |
+| 11| Employee confirms resolution                 | Assigned Agent                    | `ticket_update` | Resolution accepted                          |
+| 12| Employee rejects resolution                  | Assigned Agent                    | `ticket_update` | Ticket reopened — resolution rejected        |
+
+### App-Originated — Human Help Request
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 13| Employee requests human help (AI ticket)     | Assigned Agent                    | `assignment`    | Employee requested human assistance          |
+
+### App-Originated — Auto-Close Job (cron, every hour)
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 14| 24h timeout without employee response        | Employee                          | `ticket_update` | Ticket automatically closed after 24 hours   |
+
+### App-Originated — Comments
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 15| Employee posts a comment                     | Assigned Agent                    | `ticket_update` | New reply on "[Title]"                       |
+| 16| Agent/Supervisor/Admin posts a comment       | Employee (ticket owner)           | `ticket_update` | New reply on your ticket                     |
+
+### App-Originated — Admin Announcements
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 17| Admin sends announcement                     | All users (or filtered by role)   | `announcement`  | Custom title/body                            |
+
+### App-Originated — Manual Send (API)
+
+| # | Trigger                                      | Recipient                         | Type            | Message                                      |
+|---|----------------------------------------------|-----------------------------------|-----------------|----------------------------------------------|
+| 18| POST /notifications/send by authenticated user | Specified user                  | Any type        | Custom title/body                            |
+
+### Role-Based Summary
+
+| Role           | Receives notifications for                                                                  |
+|----------------|---------------------------------------------------------------------------------------------|
+| Employee       | Status changes, resolution requests, AI replies, auto-close, agent comments, announcements  |
+| Agent          | New assignments, employee comments, resolution accept/reject, announcements                 |
+| Supervisor     | Escalations, unassigned tickets in their department, announcements                          |
+| Admin          | Announcements (if targeted)                                                                 |
 
 ### CometChat-Originated — Step 2
 

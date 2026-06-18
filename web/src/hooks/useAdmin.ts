@@ -176,3 +176,20 @@ export function useAgentMetrics() {
     },
   })
 }
+
+// --- Announcements ---
+
+export function useSendAnnouncement() {
+  const showToast = useUIStore.getState().showToast
+
+  return useMutation({
+    mutationFn: async (payload: { title: string; body: string; targetRole?: string }) => {
+      const { data } = await api.post<{ data: { recipientCount: number } }>('/api/admin/announcements', payload)
+      return data.data
+    },
+    onSuccess: (data) => {
+      showToast({ type: 'success', title: 'Announcement Sent', message: `Delivered to ${data.recipientCount} users.` })
+    },
+    onError: (error) => showToast({ type: 'error', title: 'Announcement Failed', message: getApiErrorMessage(error) })
+  })
+}

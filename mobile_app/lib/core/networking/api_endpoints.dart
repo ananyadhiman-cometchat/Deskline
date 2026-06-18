@@ -3,10 +3,9 @@
 class ApiEndpoints {
   const ApiEndpoints._();
 
-  /// Production base URL pointing to the deployed staging server.
-  static String get baseUrl {
-    return 'https://deskline.cometchat-staging.com/api';
-  }
+  /// Base URL pointing to the staging server.
+  /// Both Android and iOS use the same remote URL.
+  static const String baseUrl = 'https://deskline.cometchat-staging.com/api';
 
   // Auth
   static const String login = '/auth/login';

@@ -142,6 +142,25 @@ class ApiAdminRepository implements AdminRepository {
     }).toList();
   }
 
+  @override
+  Future<int> sendAnnouncement({
+    required String title,
+    required String body,
+    String? targetRole,
+  }) async {
+    final payload = <String, dynamic>{
+      'title': title,
+      'body': body,
+    };
+    if (targetRole != null && targetRole != 'all') {
+      payload['targetRole'] = targetRole;
+    }
+    final response = await _apiService.sendAnnouncement(payload);
+    final json = response.data as Map<String, dynamic>;
+    final data = json['data'] as Map<String, dynamic>;
+    return (data['recipientCount'] as int?) ?? 0;
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────
 
   String _roleToString(UserRole role) {

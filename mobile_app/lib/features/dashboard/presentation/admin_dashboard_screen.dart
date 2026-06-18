@@ -58,6 +58,7 @@ class AdminDashboardScreen extends ConsumerWidget {
           _QuickNavTile(label: 'Activity Logs', icon: Icons.history_outlined, route: '/admin/activity-logs', colors: colors),
           _QuickNavTile(label: 'Notification Logs', icon: Icons.notifications_outlined, route: '/admin/notification-logs', colors: colors),
           _QuickNavTile(label: 'Analytics', icon: Icons.analytics_outlined, route: '/admin/analytics', colors: colors),
+          _QuickNavTile(label: 'Announcements', icon: Icons.campaign_outlined, route: '/admin/announcements', colors: colors),
         ],
       ),
     );
