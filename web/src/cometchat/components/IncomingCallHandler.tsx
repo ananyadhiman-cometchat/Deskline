@@ -8,25 +8,22 @@ import { useCometChat } from "../CometChatProvider";
 // specific ticket routes) so that incoming calls ring regardless
 // of the current page.
 //
-// Renders nothing when no active incoming call. When a call arrives,
-// CometChatIncomingCall displays the accept/decline ringing UI overlay.
-//
-// Call controls (mute, camera toggle, end call) are handled
-// automatically by CometChat's CometChatOngoingCall component,
-// which CometChatIncomingCall transitions to upon call accept.
+// The call UI (incoming ring + ongoing call) is wrapped in a fixed
+// fullscreen container so it overlays the entire app, covering both
+// the chat section and the rest of the page content.
 
 /**
  * IncomingCallHandler listens for incoming CometChat calls and
  * displays the ringing UI (accept/decline) as a full-screen overlay.
  *
- * Mount this component at the root of the application (e.g., in App.tsx)
+ * Mount this component at the root of the application (e.g., in AppLayout)
  * so that calls ring on any page the user is on.
  *
- * When there is no incoming call, this component renders nothing.
+ * When there is no incoming call, this component renders nothing visible.
  * When a call arrives:
- * - Shows caller info with accept/decline buttons
+ * - Shows caller info with accept/decline buttons (fullscreen overlay)
  * - On accept: transitions to the ongoing call UI with controls
- *   (mute, camera toggle, end call)
+ *   (mute, camera toggle, end call) — also fullscreen
  * - On decline: dismisses the ringing UI
  * - Auto-dismisses after 30 seconds if no response (missed call)
  */
@@ -38,5 +35,9 @@ export function IncomingCallHandler() {
     return null;
   }
 
-  return <CometChatIncomingCall />;
+  return (
+    <div className="cometchat-call-overlay">
+      <CometChatIncomingCall />
+    </div>
+  );
 }

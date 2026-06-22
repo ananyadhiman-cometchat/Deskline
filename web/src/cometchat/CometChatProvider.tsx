@@ -187,6 +187,57 @@ export function CometChatProvider({ children }: CometChatProviderProps) {
         // Runs in the background — does not block readiness.
         registerCometChatPushToken();
 
+        // 5. Add global message listener for in-app toast notifications
+        // when messages arrive in conversations the user isn't viewing.
+        const { CometChat } = await import("@cometchat/chat-sdk-javascript");
+        CometChat.addMessageListener(
+          "GLOBAL_MESSAGE_TOAST_LISTENER",
+          new CometChat.MessageListener({
+            onTextMessageReceived: (message: CometChat.TextMessage) => {
+              // Only show toast if user is NOT on the ticket page for this conversation
+              const currentPath = window.location.pathname;
+              const senderName = message.getSender()?.getName() ?? "Someone";
+              const text = message.getText();
+              const receiverId = message.getReceiverId();
+
+              // Don't toast if user is viewing this specific ticket conversation
+              if (currentPath.includes(receiverId)) return;
+
+              // Extract ticket info from the group ID (format: "ticket-{ticketId}")
+              const ticketId = receiverId.startsWith("ticket-")
+                ? receiverId.replace("ticket-", "").slice(0, 8).toUpperCase()
+                : null;
+              const ticketLabel = ticketId ? ` • Ticket ${ticketId}` : "";
+
+              useUIStore.getState().showToast({
+                type: "info",
+                title: `💬 ${senderName}${ticketLabel}`,
+                message: text.length > 80 ? text.slice(0, 80) + "…" : text,
+              });
+            },
+            onCustomMessageReceived: (message: CometChat.CustomMessage) => {
+              // Show toast for meeting/call notifications
+              if (message.getType() === "meeting") {
+                const senderName = message.getSender()?.getName() ?? "Someone";
+                const receiverId = message.getReceiverId();
+                const currentPath = window.location.pathname;
+                if (currentPath.includes(receiverId)) return;
+
+                const ticketId = receiverId.startsWith("ticket-")
+                  ? receiverId.replace("ticket-", "").slice(0, 8).toUpperCase()
+                  : null;
+                const ticketLabel = ticketId ? ` • Ticket ${ticketId}` : "";
+
+                useUIStore.getState().showToast({
+                  type: "info",
+                  title: `📞 ${senderName}${ticketLabel}`,
+                  message: "Started a call — tap Join in the conversation",
+                });
+              }
+            },
+          })
+        );
+
         if (!cancelled) {
           setIsReady(true);
         }
@@ -211,6 +262,10 @@ export function CometChatProvider({ children }: CometChatProviderProps) {
 
     return () => {
       cancelled = true;
+      // Clean up the global message listener
+      import("@cometchat/chat-sdk-javascript").then(({ CometChat }) => {
+        CometChat.removeMessageListener("GLOBAL_MESSAGE_TOAST_LISTENER");
+      }).catch(() => {});
     };
   }, []);
 

@@ -1690,4 +1690,151 @@ body {
 
 .ticket-chat-section .cometchat-message-list {
   height: 100% !important;
+  overflow-y: auto !important;
 }
+
+/* 
+ * Critical scroll fix (from cometchat-placement skill):
+ * The message list wrapper MUST have explicit height: 100% — a flex-grow-only
+ * height is indefinite so the kit's injected .cometchat child collapses to
+ * content height and clips. Both rules are required.
+ */
+.ticket-chat-message-list-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ticket-chat-message-list-wrapper > .cometchat {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* --- Fix voice/video call button visibility --- */
+/* Call buttons use icon color that blends into dark/light backgrounds */
+.ticket-chat-section [class*="cometchat-message-header"] [class*="call"] svg,
+.ticket-chat-section [class*="cometchat-message-header"] [class*="audio"] svg,
+.ticket-chat-section [class*="cometchat-message-header"] [class*="video"] svg,
+.ticket-chat-section [class*="cometchat-message-header"] [class*="voice"] svg {
+  color: var(--theme-text-main) !important;
+  fill: var(--theme-text-main) !important;
+}
+
+.cometchat [class*="call-button"],
+.cometchat [class*="callbutton"],
+.cometchat [class*="voice-call"],
+.cometchat [class*="video-call"] {
+  color: var(--theme-text-main) !important;
+}
+
+/* Ensure call button icons are visible in both themes */
+.cometchat {
+  --cometchat-icon-color-primary: var(--theme-text-main);
+  --cometchat-icon-color-secondary: var(--theme-muted);
+}
+
+/* --- Fix border visibility in light mode --- */
+.cometchat {
+  --cometchat-border-color-light: var(--theme-border);
+  --cometchat-border-color-default: var(--theme-border);
+  --cometchat-border-color-dark: #d1d5db;
+}
+
+.dark .cometchat {
+  --cometchat-border-color-dark: #3f3f46;
+}
+
+/* --- Text contrast fixes --- */
+/* Ensure message sender names and timestamps have good contrast */
+.cometchat {
+  --cometchat-text-color-primary: var(--theme-text-main);
+  --cometchat-text-color-secondary: var(--theme-muted);
+  --cometchat-text-color-tertiary: var(--theme-muted);
+}
+
+/* Message bubbles: improve text readability */
+.cometchat [class*="message-bubble"] {
+  --cometchat-text-color-primary: var(--theme-text-main);
+}
+
+/* Incoming message text should be clearly readable */
+.cometchat [class*="incoming"] [class*="text"] {
+  color: var(--theme-text-main) !important;
+}
+
+/* Timestamp text */
+.cometchat [class*="time"],
+.cometchat [class*="timestamp"] {
+  opacity: 0.7;
+}
+
+/* --- Fullscreen mode for ticket chat section --- */
+.ticket-chat-section.fixed {
+  background-color: var(--theme-bg);
+}
+
+/* --- CometChat Call UI — fullscreen overlay above everything --- */
+/* The .cometchat-call-overlay wraps CometChatIncomingCall + CometChatOngoingCall.
+   When empty (no active call), it has no visible children and doesn't block interaction.
+   When a call is active, it takes over the full viewport. */
+.cometchat-call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998; /* Below toast (9999) but above everything else */
+  pointer-events: none; /* Pass through clicks when no call active */
+}
+
+/* When CometChat renders call content inside, make it interactive and fullscreen */
+.cometchat-call-overlay > * {
+  pointer-events: auto;
+}
+
+.cometchat-call-overlay .cometchat {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Ensure the ongoing call view fills the entire overlay */
+.cometchat-call-overlay [class*="cometchat-ongoing-call"],
+.cometchat-call-overlay [class*="cometchat-incoming-call"],
+.cometchat-call-overlay [class*="cometchat-outgoing-call"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9998 !important;
+}
+
+/* --- OngoingCallElevator — reparented call UI covers the chat section --- */
+.ongoing-call-elevator {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  background: #000;
+}
+
+.ongoing-call-elevator > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.ongoing-call-elevator iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+}
+
+.ongoing-call-elevator .cometchat {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.ongoing-call-elevator [class*="ongoing-call"],
+.ongoing-call-elevator [class*="cometchat-ongoing-call"] {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+

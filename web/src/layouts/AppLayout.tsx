@@ -7,6 +7,8 @@ import { useUnreadCount } from '@/hooks/useNotifications'
 import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon, Megaphone, ShieldAlert } from 'lucide-react'
 import { CometChatProvider } from '@/cometchat/CometChatProvider'
 import { IncomingCallHandler } from '@/cometchat/components/IncomingCallHandler'
+import { CallPermissionGate } from '@/cometchat/components/CallPermissionGate'
+import { OngoingCallElevator } from '@/cometchat/components/OngoingCallElevator'
 import type { UserRole } from '@/types'
 
 // ============================================================
@@ -182,6 +184,8 @@ export function AppLayout() {
         <div className="page-content">
           <CometChatProvider>
             <IncomingCallHandler />
+            <CallPermissionGate />
+            <OngoingCallElevator />
             <Outlet />
           </CometChatProvider>
         </div>

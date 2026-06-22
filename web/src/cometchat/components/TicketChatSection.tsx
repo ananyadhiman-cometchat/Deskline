@@ -6,7 +6,7 @@ import {
 } from "@cometchat/chat-uikit-react";
 import { CometChat } from "@cometchat/chat-sdk-javascript";
 import { useCometChat } from "../CometChatProvider";
-import { MessageSquare, Users, Circle } from "lucide-react";
+import { MessageSquare, Users, Circle, Maximize2, Minimize2 } from "lucide-react";
 
 // ============================================================
 // TicketChatSection — Full CometChat messaging + calling + participants
@@ -54,10 +54,21 @@ export function TicketChatSection({
   const { isReady, error } = useCometChat();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [showParticipants, setShowParticipants] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [resolvedGroup, setResolvedGroup] = useState<CometChat.Group | undefined>();
 
   const hideMessageComposer =
     ticketStatus === "resolved" || ticketStatus === "closed";
+
+  // Handle Escape key to exit fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isFullscreen]);
 
   // Resolve the CometChat Group object from the API
   useEffect(() => {
@@ -87,13 +98,45 @@ export function TicketChatSection({
           .setLimit(30)
           .build();
         const members = await groupMemberRequest.fetchNext();
-        const participantList: Participant[] = members.map((member) => ({
-          uid: member.getUid(),
-          name: member.getName(),
-          avatar: member.getAvatar(),
-          status: (member.getStatus() as "online" | "offline" | "away") || "offline",
-          role: member.getScope ? member.getScope() : undefined,
-        }));
+        const participantList: Participant[] = members.map((member) => {
+          // Determine the DeskLine role from CometChat user tags
+          // Tags are set during user sync as ["role:agent", "dept:IT"] etc.
+          let displayRole: string | undefined;
+          
+          // First try to match by known UIDs from the ticket data
+          if (agent && member.getUid() === agent.id) {
+            displayRole = "Agent";
+          } else if (employee && member.getUid() === employee.id) {
+            displayRole = "Employee";
+          } else {
+            // For other members (admin/supervisor who intercepted), read from tags
+            const tags = member.getTags?.() ?? [];
+            const roleTag = tags.find((t: string) => t.startsWith("role:"));
+            if (roleTag) {
+              const role = roleTag.replace("role:", "");
+              // Capitalize first letter
+              displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+            } else {
+              // Last fallback based on CometChat group scope
+              const scope = member.getScope?.();
+              if (scope === "admin") {
+                displayRole = "Admin";
+              } else if (scope === "moderator") {
+                displayRole = "Supervisor";
+              } else {
+                displayRole = "Member";
+              }
+            }
+          }
+          
+          return {
+            uid: member.getUid(),
+            name: member.getName(),
+            avatar: member.getAvatar(),
+            status: (member.getStatus() as "online" | "offline" | "away") || "offline",
+            role: displayRole,
+          };
+        });
         setParticipants(participantList);
       } catch (err) {
         console.error("[TicketChatSection] Failed to fetch participants:", err);
@@ -200,9 +243,25 @@ export function TicketChatSection({
   // --- Main render ---
 
   return (
-    <div className="ticket-chat-section rounded-lg border border-[var(--color-border)] overflow-hidden">
+    <div className={`ticket-chat-section overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : "rounded-lg border border-[var(--color-border)]"}`}>
+      {/* Header bar with section label + fullscreen toggle */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-shrink-0">
+        <div className="flex items-center gap-2 section-label mb-0">
+          <MessageSquare size={14} />
+          Communication Thread
+        </div>
+        <button
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="p-1.5 rounded text-[var(--color-muted)] hover:text-[var(--color-navy)] hover:bg-[var(--color-border)] transition-colors"
+          title={isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
+      </div>
+
       {/* Participants (left) + Chat (right) Layout */}
-      <div className="flex" style={{ height: "620px" }}>
+      <div className="flex flex-1 min-h-0" style={{ height: isFullscreen ? "calc(100vh - 45px)" : "575px" }}>
         {/* Participants Sidebar — LEFT side */}
         {showParticipants && (
           <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-background)] overflow-y-auto flex-shrink-0">
@@ -258,20 +317,20 @@ export function TicketChatSection({
                     </div>
                     {/* Name + Role + Status */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-[var(--color-navy)] truncate leading-tight">
+                      <p className="text-xs font-semibold text-[var(--theme-text-main)] truncate leading-tight">
                         {participant.name}
                       </p>
-                      <p className="text-[10px] text-[var(--color-muted)] leading-tight mt-0.5">
+                      <p className="text-[10px] leading-tight mt-0.5">
                         {participant.role && (
-                          <span className="font-medium">{participant.role}</span>
+                          <span className="font-semibold text-[var(--color-brand-red)]">{participant.role}</span>
                         )}
-                        {participant.role && " · "}
+                        {participant.role && <span className="text-[var(--color-muted)]"> · </span>}
                         <span className={
                           participant.status === "online"
-                            ? "text-green-600 dark:text-green-400"
+                            ? "text-green-500 font-medium"
                             : participant.status === "away"
-                            ? "text-amber-600 dark:text-amber-400"
-                            : ""
+                            ? "text-amber-500 font-medium"
+                            : "text-[var(--color-muted)]"
                         }>
                           {participant.status === "online" ? "Online" : participant.status === "away" ? "Away" : "Offline"}
                         </span>
@@ -285,9 +344,9 @@ export function TicketChatSection({
         )}
 
         {/* Chat Area — RIGHT side */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Message Header with call buttons */}
-          <div className="relative border-b border-[var(--color-border)]">
+          <div className="relative border-b border-[var(--color-border)] flex-shrink-0">
             {/* Show participants toggle when panel is hidden */}
             {!showParticipants && (
               <button
@@ -302,18 +361,18 @@ export function TicketChatSection({
             <CometChatMessageHeader group={resolvedGroup} />
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-hidden min-h-0">
+          {/* Messages — bounded height container for scroll to work */}
+          <div className="ticket-chat-message-list-wrapper">
             <CometChatMessageList group={resolvedGroup} />
           </div>
 
           {/* Composer */}
           {!hideMessageComposer ? (
-            <div className="border-t border-[var(--color-border)]">
+            <div className="border-t border-[var(--color-border)] flex-shrink-0">
               <CometChatMessageComposer group={resolvedGroup} />
             </div>
           ) : (
-            <div className="border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-center">
+            <div className="border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-center flex-shrink-0">
               <p className="text-xs text-[var(--color-muted)]">
                 This conversation is read-only — the ticket has been {ticketStatus}.
               </p>
