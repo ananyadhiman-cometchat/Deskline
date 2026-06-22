@@ -144,7 +144,8 @@ export async function retryEvent(eventId: string): Promise<void> {
 // ─── Event Handlers ──────────────────────────────────────────────────────────
 
 /**
- * Handle message.sent: log activity and update ticket's last_activity_at.
+ * Handle message.sent: log activity, update ticket's last_activity_at,
+ * and trigger AI response for AI-assisted conversations.
  */
 async function handleMessageSent(payload: MessageSentPayload): Promise<void> {
   // Find the ticket associated with this conversation
@@ -176,6 +177,30 @@ async function handleMessageSent(payload: MessageSentPayload): Promise<void> {
     where: { id: ticket.id },
     data: { lastActivityAt: new Date(payload.sentAt) },
   });
+
+  // --- AI Agent auto-response for Information tickets ---
+  // If this is an AI-assisted conversation (information subtype, no human agent yet),
+  // and the message is NOT from the AI agent itself, generate a Gemini response.
+  const aiAgentUid = process.env.COMETCHAT_AI_AGENT_UID;
+  if (
+    aiAgentUid &&
+    payload.senderUid !== aiAgentUid &&
+    ticket.subType === 'information' &&
+    !ticket.agentId &&
+    payload.messageType === 'text' &&
+    payload.text
+  ) {
+    // Fire and forget — don't block webhook response
+    void generateAndSendAIResponse(
+      ticket.id,
+      ticket.title,
+      payload.conversationId,
+      payload.text,
+      aiAgentUid
+    ).catch((err) => {
+      console.error('[Webhook] AI response generation failed:', err instanceof Error ? err.message : err);
+    });
+  }
 }
 
 /**
@@ -291,4 +316,64 @@ async function handleCallEnded(payload: CallEndedPayload): Promise<void> {
       status: payload.status,
     },
   });
+}
+
+// ─── AI Agent Response Handler ───────────────────────────────────────────────
+
+/**
+ * Generate an AI response using Gemini and send it back to the CometChat
+ * conversation as the AI Agent user.
+ *
+ * This is the core of Option B: webhook-driven AI.
+ * Flow: Employee message → CometChat webhook → this function → Gemini → CometChat REST API
+ */
+async function generateAndSendAIResponse(
+  ticketId: string,
+  ticketTitle: string,
+  conversationId: string,
+  userMessage: string,
+  aiAgentUid: string
+): Promise<void> {
+  const { generateTicketResponse } = await import('../ai/ai.service.js');
+  const { getCometChatClient } = await import('./cometchat-client.js');
+
+  // Fetch recent message history for context (last 5 messages from the ticket)
+  const recentComments = await prisma.ticketComment.findMany({
+    where: { ticketId },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    select: { body: true, isAi: true, createdAt: true },
+  });
+
+  // Build context from conversation history
+  const historyContext = recentComments.length > 0
+    ? recentComments
+        .reverse()
+        .map((c) => `${c.isAi ? 'AI' : 'Employee'}: ${c.body}`)
+        .join('\n')
+    : '';
+
+  // Generate AI response using Gemini
+  // We pass the latest user message as the "description" for the AI service
+  const contextualPrompt = historyContext
+    ? `Previous conversation:\n${historyContext}\n\nLatest message from employee: ${userMessage}`
+    : userMessage;
+
+  const aiResponse = await generateTicketResponse(ticketTitle, contextualPrompt);
+
+  // Send the AI response into the CometChat group as the AI agent
+  const client = getCometChatClient();
+  await client.sendMessage(conversationId, aiResponse, aiAgentUid, 'group');
+
+  // Also save the AI response as a ticket comment for history/fallback
+  await prisma.ticketComment.create({
+    data: {
+      ticketId,
+      userId: aiAgentUid, // Using the AI agent UID as the user ID
+      body: aiResponse,
+      isAi: true,
+    },
+  });
+
+  console.log(`[Webhook AI] AI response sent for ticket ${ticketId} in conversation ${conversationId}`);
 }
