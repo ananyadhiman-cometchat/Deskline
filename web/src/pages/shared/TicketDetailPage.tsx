@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, useRejectResolution, useRequestHumanHelp } from '@/hooks/useTickets'
+import { useTicket, useUpdateTicket, useEscalateTicket, useConfirmResolution, useRejectResolution, useRequestHumanHelp, useInterceptTicket } from '@/hooks/useTickets'
 import { useAuthStore } from '@/store/authStore'
 import { TicketMetaPanel } from '@/components/tickets/TicketMetaPanel'
 import { TicketStatusTimeline } from '@/components/tickets/TicketStatusTimeline'
@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react'
 import { getApiErrorMessage } from '@/lib/api'
 import { useUIStore } from '@/store/uiStore'
 import { ArrowLeft, FileText, GitBranch, CheckCircle2, XCircle } from 'lucide-react'
+import { TicketChatSection } from '@/cometchat'
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +28,7 @@ export default function TicketDetailPage() {
   const confirmMutation = useConfirmResolution(id!)
   const rejectMutation = useRejectResolution(id!)
   const humanHelpMutation = useRequestHumanHelp(id!)
+  const interceptMutation = useInterceptTicket(id!)
 
   const [isEscalateModalOpen, setEscalateModalOpen] = useState(false)
   const [isResolutionModalOpen, setResolutionModalOpen] = useState(false)
@@ -97,7 +99,9 @@ export default function TicketDetailPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="page-header mb-1">{ticket.title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="page-header mb-1">{ticket.title}</h1>
+          </div>
           <p className="text-[var(--color-muted)] text-sm font-mono uppercase tracking-wider mt-1">TICKET — {ticket.id.slice(0, 8).toUpperCase()}</p>
         </div>
 
@@ -144,6 +148,19 @@ export default function TicketDetailPage() {
 
       {ticket.status === 'escalated' && <EscalationBanner />}
 
+      {/* Intercept (Join) button for admins/supervisors */}
+      {(user?.role === 'admin' || user?.role === 'supervisor') && ticket.cometchatConvoId && (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={() => interceptMutation.mutate()}
+            isLoading={interceptMutation.isPending}
+          >
+            Join Conversation
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
@@ -185,7 +202,21 @@ export default function TicketDetailPage() {
             </Card>
           )}
 
-          <TicketCommunicationThread ticket={ticket} />
+          {/* CometChat Communication — replaces old thread when conversation exists */}
+          {ticket.cometchatConvoId && (
+            <TicketChatSection
+              conversationId={ticket.cometchatConvoId}
+              ticketStatus={ticket.status}
+              subType={ticket.subType}
+              employee={ticket.employee ?? { id: ticket.employeeId, name: 'Employee' }}
+              agent={ticket.agent ?? (ticket.agentId ? { id: ticket.agentId, name: 'Agent' } : null)}
+            />
+          )}
+
+          {/* Fall back to old thread when no CometChat conversation */}
+          {!ticket.cometchatConvoId && (
+            <TicketCommunicationThread ticket={ticket} />
+          )}
         </div>
 
         {/* Sidebar Column */}

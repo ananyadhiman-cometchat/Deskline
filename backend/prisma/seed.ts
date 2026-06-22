@@ -2,10 +2,36 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../src/lib/password.js';
+import { batchSyncUsers } from '../src/modules/cometchat/cometchat-sync.service.js';
+import type { DesklineUserForSync } from '../src/modules/cometchat/cometchat-sync.service.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 });
+
+/**
+ * Batch-sync all seeded users to CometChat.
+ * Logs results but does not throw — seed completes even if CometChat is unreachable.
+ */
+async function syncSeededUsersToCometChat(
+  users: Array<{ id: string; name: string; role: string; department: string }>
+): Promise<void> {
+  try {
+    const usersForSync: DesklineUserForSync[] = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      role: u.role as DesklineUserForSync['role'],
+      department: u.department as DesklineUserForSync['department'],
+    }));
+
+    const result = await batchSyncUsers(usersForSync);
+    console.log(
+      `[CometChat Seed Sync] Total: ${result.total}, Successful: ${result.successful}, Failed: ${result.failed}`
+    );
+  } catch (error) {
+    console.warn('[CometChat Seed Sync] Batch sync failed (CometChat may be unavailable):', error);
+  }
+}
 
 async function main() {
   await prisma.refreshToken.deleteMany();
@@ -27,6 +53,11 @@ async function main() {
   for (let i = 1; i <= 70; i++) users.push({ name: `Employee ${i}`, email: `employee${i}@deskline.local`, passwordHash, role: 'employee', department: departments[i % 3] });
   await prisma.user.createMany({ data: users });
   const allUsers = await prisma.user.findMany();
+
+  // Batch-sync all seeded users to CometChat for initial data population.
+  // This is non-blocking: if CometChat is unavailable, seed still completes.
+  await syncSeededUsersToCometChat(allUsers);
+
   const employees = allUsers.filter(u => u.role === 'employee');
   const agents = allUsers.filter(u => u.role === 'agent' || u.role === 'supervisor');
   for (let i = 0; i < 60; i++) {

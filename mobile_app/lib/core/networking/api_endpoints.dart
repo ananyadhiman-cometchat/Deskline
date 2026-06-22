@@ -56,4 +56,7 @@ class ApiEndpoints {
   static const String supervisorEscalations = '/admin/supervisor/escalations';
   static const String supervisorDashboard = '/admin/supervisor/dashboard';
   static const String agentMetrics = '/admin/agent/metrics';
+
+  // CometChat
+  static const String cometchatAuthToken = '/cometchat/auth-token';
 }

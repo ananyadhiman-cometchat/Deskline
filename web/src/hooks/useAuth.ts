@@ -7,6 +7,8 @@ import type { LoginFormValues, RegisterFormValues } from '@/lib/schemas'
 import { useNavigate } from 'react-router-dom'
 import { useUIStore } from '@/store/uiStore'
 import { getApiErrorMessage } from '@/lib/api'
+import { unregisterCometChatPushToken } from '@/cometchat/pushNotifications'
+import { CometChatUIKit } from '@cometchat/chat-uikit-react'
 
 // ============================================================
 // Auth Hooks
@@ -96,6 +98,11 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
+      // Unregister CometChat push token before logout (best-effort, non-blocking)
+      await unregisterCometChatPushToken();
+      // Logout from CometChat SDK session
+      await CometChatUIKit.logout().catch(() => {});
+
       const refreshToken = localStorage.getItem('deskline_refresh_token')
       await api.post('/api/auth/logout', { refreshToken })
     },

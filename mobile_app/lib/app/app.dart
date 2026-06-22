@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../cometchat/widgets/incoming_call_widget.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_provider.dart';
 import 'router.dart';
@@ -22,6 +23,13 @@ class DesklineApp extends ConsumerWidget {
       themeAnimationCurve: Curves.easeOut,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        // Mount IncomingCallWidget at the root level so incoming calls
+        // ring regardless of the current page/route.
+        return IncomingCallWidget(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

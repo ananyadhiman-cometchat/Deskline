@@ -11,6 +11,9 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { adminUsersRouter, userProfileRouter } from './modules/users/users.route.js';
 import { healthRouter } from './routes/health.route.js';
 import { adminRouter } from './modules/admin/admin.route.js';
+import { cometchatRouter } from './modules/cometchat/cometchat.route.js';
+import { cometchatWebhookRouter } from './modules/cometchat/cometchat-webhook.route.js';
+import { cometchatModerationRouter, cometchatWebhookAdminRouter } from './modules/cometchat/cometchat-moderation.route.js';
 
 export const app = express();
 
@@ -58,5 +61,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/users', userProfileRouter);
 app.use('/api/admin/users', adminUsersRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/cometchat', cometchatRouter);
+app.use('/webhooks/cometchat', cometchatWebhookRouter);
+app.use('/api/admin/moderation', cometchatModerationRouter);
+app.use('/api/admin/webhooks', cometchatWebhookAdminRouter);
 
 app.use(errorHandler);

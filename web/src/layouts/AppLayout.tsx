@@ -4,7 +4,9 @@ import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { useUIStore } from '@/store/uiStore'
 import { useUnreadCount } from '@/hooks/useNotifications'
-import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon, Megaphone } from 'lucide-react'
+import { LogOut, User as UserIcon, Bell, Menu, Inbox, Ticket, Users, Activity, ListOrdered, Shield, Sun, Moon, Megaphone, ShieldAlert } from 'lucide-react'
+import { CometChatProvider } from '@/cometchat/CometChatProvider'
+import { IncomingCallHandler } from '@/cometchat/components/IncomingCallHandler'
 import type { UserRole } from '@/types'
 
 // ============================================================
@@ -68,6 +70,7 @@ export function AppLayout() {
     { label: 'Activity Logs', to: '/admin/activity-logs', icon: <Activity size={18} />, roles: ['admin'] },
     { label: 'Notification Logs', to: '/admin/notification-logs', icon: <Bell size={18} />, roles: ['admin'] },
     { label: 'Announcements', to: '/admin/announcements', icon: <Megaphone size={18} />, roles: ['admin'] },
+    { label: 'Moderation', to: '/admin/moderation', icon: <ShieldAlert size={18} />, roles: ['admin'] },
   ]
 
   const visibleNavItems = navItems.filter(item => item.roles.includes(user.role))
@@ -177,7 +180,10 @@ export function AppLayout() {
 
         {/* Page Content */}
         <div className="page-content">
-          <Outlet />
+          <CometChatProvider>
+            <IncomingCallHandler />
+            <Outlet />
+          </CometChatProvider>
         </div>
       </main>
     </div>

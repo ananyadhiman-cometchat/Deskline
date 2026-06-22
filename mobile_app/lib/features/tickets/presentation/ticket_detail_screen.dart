@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../cometchat/widgets/call_buttons_widget.dart';
+import '../../../cometchat/widgets/chat_panel_widget.dart';
 import '../../../core/theme/color_scheme.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
@@ -148,6 +150,52 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
           ticketStatus: ticket.status,
         ),
         const SizedBox(height: AppSpacing.xl),
+
+        // ─── CometChat Panel (when conversation exists) ─────
+        if (ticket.cometchatConvoId != null &&
+            ticket.cometchatConvoId!.isNotEmpty) ...[
+          // ─── Call Buttons (conversation/escalation tickets) ──
+          if ((ticket.subType == TicketSubtype.conversation ||
+                  ticket.subType == TicketSubtype.escalation) &&
+              ticket.status != TicketStatus.closed &&
+              ticket.status != TicketStatus.resolved &&
+              ticket.agentId != null) ...[
+            Row(
+              children: [
+                const Expanded(child: SectionHeader(title: 'LIVE CHAT')),
+                CallButtonsWidget(
+                  recipientUid: userRole == UserRole.employee
+                      ? ticket.agentId!
+                      : ticket.employeeId,
+                ),
+              ],
+            ),
+          ] else ...[
+            const SectionHeader(title: 'LIVE CHAT'),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          ChatPanelWidget(
+            conversationId: ticket.cometchatConvoId!,
+            conversationType:
+                ticket.cometchatConvoType == 'group'
+                    ? ConversationType.group
+                    : ConversationType.oneOnOne,
+            ticketStatus: ticket.status,
+            recipientUid: ticket.cometchatConvoType != 'group'
+                ? ticket.agentId ?? ticket.employeeId
+                : null,
+            groupId: ticket.cometchatConvoType == 'group'
+                ? ticket.cometchatConvoId
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ] else if (ticket.subType == TicketSubtype.conversation ||
+            ticket.subType == TicketSubtype.escalation) ...[
+          const SectionHeader(title: 'LIVE CHAT'),
+          const SizedBox(height: AppSpacing.sm),
+          const NoChatPlaceholder(),
+          const SizedBox(height: AppSpacing.xl),
+        ],
 
         // ─── Actions (role-based) ───────────────────────────
         ..._buildActions(ticket, userRole, colors),

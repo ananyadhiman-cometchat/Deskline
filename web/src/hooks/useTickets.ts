@@ -149,3 +149,20 @@ export function useRejectResolution(id: string) {
     onError: (error) => showToast({ type: 'error', title: 'Rejection Failed', message: getApiErrorMessage(error) })
   })
 }
+
+export function useInterceptTicket(id: string) {
+  const qc = useQueryClient()
+  const showToast = useUIStore.getState().showToast
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSingleResponse<Ticket>>(`/api/tickets/${id}/intercept`)
+      return data.data
+    },
+    onSuccess: () => {
+      showToast({ type: 'success', title: 'Joined Conversation', message: 'You have been added to the ticket conversation.' })
+      void qc.invalidateQueries({ queryKey: ['tickets', id] })
+    },
+    onError: (error) => showToast({ type: 'error', title: 'Join Failed', message: getApiErrorMessage(error) })
+  })
+}

@@ -1,0 +1,249 @@
+import { useEffect, useState, createContext, useContext, type ReactNode } from "react";
+import { CometChatUIKit, UIKitSettingsBuilder } from "@cometchat/chat-uikit-react";
+import { CometChatCalls } from "@cometchat/calls-sdk-javascript";
+import { COMETCHAT_APP_ID, COMETCHAT_REGION } from "./config";
+import { formatCometChatError, logCometChatError } from "./errors";
+import { registerCometChatPushToken } from "./pushNotifications";
+import { api } from "@/lib/api";
+import { useUIStore } from "@/store/uiStore";
+
+// ============================================================
+// CometChatProvider — Init + Login + Calls SDK gate
+// ============================================================
+// Module-level guards prevent double-init under React 18 StrictMode.
+// StrictMode triggers effects twice (mount → unmount → mount) in dev,
+// which would otherwise cause "SDK already initialized" or
+// "Please wait until the previous login request ends" errors.
+
+let initialized = false;
+let loginInFlight: Promise<unknown> | null = null;
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+interface CometChatContextValue {
+  isReady: boolean;
+  error: string | null;
+}
+
+const CometChatContext = createContext<CometChatContextValue>({
+  isReady: false,
+  error: null,
+});
+
+/**
+ * Hook for child components to check CometChat ready state.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useCometChat = () => useContext(CometChatContext);
+
+/**
+ * Wait for a given number of milliseconds.
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Initialize the CometChat UI Kit SDK with exponential backoff retry.
+ * Retries up to MAX_RETRIES times on failure (1s, 2s, 4s delays).
+ */
+async function initWithRetry(): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const settings = new UIKitSettingsBuilder()
+        .setAppId(COMETCHAT_APP_ID)
+        .setRegion(COMETCHAT_REGION)
+        .subscribePresenceForAllUsers()
+        .build();
+
+      await CometChatUIKit.init(settings);
+      return; // success
+    } catch (e) {
+      lastError = e;
+      logCometChatError(e);
+      if (attempt < MAX_RETRIES - 1) {
+        await delay(BASE_DELAY_MS * Math.pow(2, attempt)); // 1s, 2s, 4s
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Initialize CometChat Calls SDK v5 with exponential backoff retry.
+ */
+async function initCallsWithRetry(): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const result = await CometChatCalls.init({
+        appId: COMETCHAT_APP_ID,
+        region: COMETCHAT_REGION as "us" | "eu" | "in",
+      });
+      if (result && (result as { error?: unknown }).error) {
+        throw (result as { error: unknown }).error;
+      }
+      return; // success
+    } catch (e) {
+      lastError = e;
+      logCometChatError(e);
+      if (attempt < MAX_RETRIES - 1) {
+        await delay(BASE_DELAY_MS * Math.pow(2, attempt));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Guard concurrent login calls. React StrictMode double-mounts cause
+ * two login() calls to overlap — the SDK rejects concurrent logins.
+ * This caches the in-flight promise so the second caller just awaits it.
+ */
+async function ensureLoggedIn(authToken: string): Promise<void> {
+  const existing = await CometChatUIKit.getLoggedinUser();
+  if (existing) return;
+
+  if (loginInFlight) {
+    await loginInFlight;
+    return;
+  }
+
+  loginInFlight = CometChatUIKit.loginWithAuthToken(authToken);
+  try {
+    await loginInFlight;
+  } finally {
+    loginInFlight = null;
+  }
+}
+
+/**
+ * Fetch a CometChat auth token from the DeskLine backend.
+ */
+async function fetchAuthToken(): Promise<string> {
+  const { data } = await api.post<{ cometchatAuthToken?: string }>(
+    "/api/cometchat/auth-token"
+  );
+  // Backend returns { cometchatAuthToken: token }. Also handle a wrapped
+  // { data: { cometchatAuthToken } } shape and legacy { authToken } just in case.
+  const payload = data as unknown as {
+    data?: { cometchatAuthToken?: string; authToken?: string };
+    cometchatAuthToken?: string;
+    authToken?: string;
+  };
+  const token =
+    payload.cometchatAuthToken ??
+    payload.authToken ??
+    payload.data?.cometchatAuthToken ??
+    payload.data?.authToken;
+  if (!token) {
+    throw new Error("Backend returned empty CometChat auth token");
+  }
+  return token;
+}
+
+interface CometChatProviderProps {
+  children: ReactNode;
+}
+
+/**
+ * CometChatProvider gates its children behind full SDK initialization:
+ * 1. CometChatUIKit.init() — Chat SDK
+ * 2. loginWithAuthToken — authenticate with server-minted token
+ * 3. CometChatCalls.init() — Calls SDK v5
+ *
+ * On failure after 3 retries, displays a non-blocking toast and renders
+ * an inline error state (non-chat features remain accessible).
+ */
+export function CometChatProvider({ children }: CometChatProviderProps) {
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function setup() {
+      try {
+        // 1. Init Chat SDK (with retry + exponential backoff)
+        if (!initialized) {
+          initialized = true;
+          await initWithRetry();
+        }
+
+        // 2. Fetch auth token from backend and login
+        const authToken = await fetchAuthToken();
+        await ensureLoggedIn(authToken);
+
+        // 3. Init Calls SDK v5 (with retry + exponential backoff)
+        await initCallsWithRetry();
+
+        // 4. Register FCM token with CometChat for web push notifications.
+        // Runs in the background — does not block readiness.
+        registerCometChatPushToken();
+
+        if (!cancelled) {
+          setIsReady(true);
+        }
+      } catch (e) {
+        logCometChatError(e);
+        const formatted = formatCometChatError(e);
+
+        if (!cancelled) {
+          setError(formatted);
+
+          // Non-blocking toast so user can still use non-chat features
+          useUIStore.getState().showToast({
+            type: "error",
+            title: "Chat Unavailable",
+            message: formatted,
+          });
+        }
+      }
+    }
+
+    setup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return (
+      <CometChatContext.Provider value={{ isReady: false, error }}>
+        <div
+          role="alert"
+          style={{
+            color: "#b91c1c",
+            padding: 16,
+            fontFamily: "ui-monospace, monospace",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          <strong>CometChat failed to initialize.</strong>
+          <div style={{ marginTop: 8 }}>{error}</div>
+          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+            See the browser console for the full error object and any [CometChat
+            hint] line above it.
+          </div>
+        </div>
+      </CometChatContext.Provider>
+    );
+  }
+
+  if (!isReady) {
+    return null; // Loading — children gate closed
+  }
+
+  return (
+    <CometChatContext.Provider value={{ isReady, error }}>
+      {children}
+    </CometChatContext.Provider>
+  );
+}

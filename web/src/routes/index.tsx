@@ -16,6 +16,7 @@ const ProfilePage = lazy(() => import('@/pages/shared/ProfilePage'))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const AgentInboxPage = lazy(() => import('@/pages/agent/InboxPage'))
 const AgentMetricsPage = lazy(() => import('@/pages/agent/AgentMetricsPage'))
+const AgentConversationsPage = lazy(() => import('@/pages/agent/ConversationsPage'))
 const AllTicketsPage = lazy(() => import('@/pages/supervisor/AllTicketsPage'))
 const AgentLoadPage = lazy(() => import('@/pages/supervisor/AgentLoadPage'))
 const SupervisorDashboardPage = lazy(() => import('@/pages/supervisor/SupervisorDashboardPage'))
@@ -24,6 +25,7 @@ const UserManagementPage = lazy(() => import('@/pages/admin/UserManagementPage')
 const ActivityLogPage = lazy(() => import('@/pages/admin/ActivityLogPage'))
 const NotificationLogPage = lazy(() => import('@/pages/admin/NotificationLogPage'))
 const AnnouncementsPage = lazy(() => import('@/pages/admin/AnnouncementsPage'))
+const ModerationPage = lazy(() => import('@/pages/admin/ModerationPage'))
 
 function PageLoader() {
   return (
@@ -97,6 +99,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: '/agent/conversations',
+        element: (
+          <AuthGuard allowedRoles={['agent']}>
+            <S><AgentConversationsPage /></S>
+          </AuthGuard>
+        ),
+      },
+      {
         path: '/agent/metrics',
         element: <S><AgentMetricsPage /></S>,
       },
@@ -165,6 +175,14 @@ export const router = createBrowserRouter([
         element: (
           <AuthGuard allowedRoles={['admin']}>
             <S><AnnouncementsPage /></S>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: '/admin/moderation',
+        element: (
+          <AuthGuard allowedRoles={['admin']}>
+            <S><ModerationPage /></S>
           </AuthGuard>
         ),
       },

@@ -1640,3 +1640,54 @@ body {
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
 .delay-400 { animation-delay: 400ms; }
+
+
+/* ============================================================
+   COMETCHAT UI OVERRIDES
+   ============================================================
+   Theming via CSS variables only (per cometchat-core skill §3/§8.3 —
+   never target internal class names like .cometchat-message-bubble-*,
+   they are not part of the public API and change between versions).
+   The css-variables.css file is imported in main.tsx BEFORE index.css,
+   so these overrides take precedence.
+   ============================================================ */
+
+/* --- Light mode base overrides --- */
+.cometchat {
+  --cometchat-font-family: "Inter", sans-serif;
+  --cometchat-primary-color: #FF4655;
+  --cometchat-background-color-01: var(--theme-bg);
+  --cometchat-background-color-02: var(--theme-surface);
+  --cometchat-background-color-03: var(--theme-border);
+  --cometchat-text-color-primary: var(--theme-text-main);
+  --cometchat-text-color-secondary: var(--theme-muted);
+  --cometchat-border-color-light: var(--theme-border);
+  --cometchat-border-color-default: var(--theme-border);
+  --cometchat-radius-2: 2px;
+  --cometchat-radius-3: 2px;
+}
+
+/* --- Dark mode overrides (app toggles `.dark` on <html>) --- */
+.dark .cometchat {
+  --cometchat-primary-color: #FF4655;
+  --cometchat-background-color-01: #18181b;
+  --cometchat-background-color-02: #09090b;
+  --cometchat-background-color-03: #27272a;
+  --cometchat-text-color-primary: #f8fafc;
+  --cometchat-text-color-secondary: #a1a1aa;
+  --cometchat-border-color-light: #27272a;
+  --cometchat-border-color-default: #27272a;
+  --cometchat-neutral-color-300: #3f3f46;
+  --cometchat-neutral-color-50: #18181b;
+  --cometchat-neutral-color-100: #27272a;
+  color-scheme: dark;
+}
+
+/* --- Ticket chat section: make the embedded message list fill height --- */
+.ticket-chat-section .cometchat {
+  height: 100%;
+}
+
+.ticket-chat-section .cometchat-message-list {
+  height: 100% !important;
+}

@@ -33,6 +33,8 @@ _$TicketImpl _$$TicketImplFromJson(Map<String, dynamic> json) => _$TicketImpl(
   agent: json['agent'] == null
       ? null
       : TicketUser.fromJson(json['agent'] as Map<String, dynamic>),
+  cometchatConvoId: json['cometchatConvoId'] as String?,
+  cometchatConvoType: json['cometchatConvoType'] as String?,
 );
 
 Map<String, dynamic> _$$TicketImplToJson(_$TicketImpl instance) =>
@@ -53,6 +55,8 @@ Map<String, dynamic> _$$TicketImplToJson(_$TicketImpl instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
       'employee': instance.employee,
       'agent': instance.agent,
+      'cometchatConvoId': instance.cometchatConvoId,
+      'cometchatConvoType': instance.cometchatConvoType,
     };
 
 const _$TicketCategoryEnumMap = {

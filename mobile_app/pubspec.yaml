@@ -30,6 +30,10 @@ dependencies:
   # Local Notifications (foreground system tray display)
   flutter_local_notifications: ^18.0.1
 
+  # CometChat
+  cometchat_chat_uikit: ^5.0.0
+  cometchat_calls_sdk: ^5.0.2
+
   # Model Annotations (freezed & json)
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

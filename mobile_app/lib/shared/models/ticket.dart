@@ -25,6 +25,9 @@ abstract class Ticket with _$Ticket {
     // Expanded relations (included in detail/list responses)
     TicketUser? employee,
     TicketUser? agent,
+    // CometChat integration fields
+    String? cometchatConvoId,
+    String? cometchatConvoType,
   }) = _Ticket;
 
   factory Ticket.fromJson(Map<String, dynamic> json) => _$TicketFromJson(json);

@@ -5,6 +5,9 @@ import { AppError } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
 import { recordActivityLog } from '../activity-logs/activity-logs.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
+import { createTicketConversation, createEscalationGroup, addMemberToTicketGroup } from '../cometchat/cometchat-chat.service.js';
+import { createAIAgentConversation, handleHumanHelpRequest } from '../cometchat/cometchat-ai.service.js';
+import { onTicketStatusChange } from '../cometchat/cometchat-lifecycle.service.js';
 
 const safeUserSelect = {
   id: true,
@@ -29,6 +32,7 @@ const ticketSelect = {
   status: true,
   employeeId: true,
   agentId: true,
+  cometchatConvoId: true,
   lastActivityAt: true,
   resolvedAt: true,
   resolutionConfirmationRequestedAt: true,
@@ -312,6 +316,11 @@ async function createTicketWithRouting(input: {
       }
     });
 
+    // Create CometChat AI Agent conversation (non-blocking)
+    createAIAgentConversation(ticket.id, input.actorId).catch((err) => {
+      console.error('[Tickets] Non-blocking: AI conversation creation failed:', (err as Error)?.message);
+    });
+
     return ticket;
   }
 
@@ -558,6 +567,25 @@ async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
     newStatus: TicketStatus.escalated
   });
 
+  // Create CometChat escalation group (non-blocking)
+  // Include the original agent if one was assigned before escalation
+  const escalationSupervisorUid = supervisor?.id ?? ticket.agentId;
+  if (escalationSupervisorUid) {
+    createEscalationGroup(
+      ticket.id,
+      ticket.employeeId,
+      escalationSupervisorUid,
+      supervisor ? (ticket.agentId ?? undefined) : undefined
+    ).catch((err) => {
+      console.error('[Tickets] Non-blocking: Escalation group creation failed:', (err as Error)?.message);
+    });
+  }
+
+  // Sync chat lifecycle with escalation status change (non-blocking)
+  onTicketStatusChange(ticketId, ticket.status, TicketStatus.escalated).catch((err) => {
+    console.error('[Tickets] Non-blocking: Chat lifecycle sync on escalation failed:', (err as Error)?.message);
+  });
+
   return updatedTicket;
 }
 
@@ -649,7 +677,19 @@ async function updateTicketStatus(actor: TicketActor, ticketId: string, status: 
       agentId: actor.id,
       category: ticket.category
     });
+
+    // Create CometChat 1:1 conversation when agent claims a conversation ticket (non-blocking)
+    if (ticket.subType === TicketSubType.conversation) {
+      createTicketConversation(ticket.id, ticket.employeeId, actor.id).catch((err) => {
+        console.error('[Tickets] Non-blocking: Chat creation on claim failed:', (err as Error)?.message);
+      });
+    }
   }
+
+  // Sync chat lifecycle with ticket status change (non-blocking)
+  onTicketStatusChange(ticketId, ticket.status, status).catch((err) => {
+    console.error('[Tickets] Non-blocking: Chat lifecycle sync failed:', (err as Error)?.message);
+  });
 
   await notifyTicketOwnerUpdate({
     actorId: actor.id,
@@ -761,6 +801,20 @@ export async function requestHumanHelp(actor: TicketActor, ticketId: string) {
     assignedAgentId: assignee?.id ?? null
   });
 
+  // Trigger AI-to-human handoff in CometChat (non-blocking)
+  // This sends a closing message from the AI Agent; the conversation history remains accessible.
+  handleHumanHelpRequest(ticket.id).catch((err) => {
+    console.error('[Tickets] Non-blocking: AI-to-human handoff failed:', (err as Error)?.message);
+  });
+
+  // Add the human agent to the existing AI group conversation (non-blocking)
+  // This preserves the conversation history — no new conversation is created.
+  if (assignee) {
+    addMemberToTicketGroup(ticket.id, assignee.id, 'admin').catch((err) => {
+      console.error('[Tickets] Non-blocking: Adding agent to AI group failed:', (err as Error)?.message);
+    });
+  }
+
   if (assignee) {
     await notifyAssignment({
       actorId: actor.id,
@@ -768,7 +822,7 @@ export async function requestHumanHelp(actor: TicketActor, ticketId: string) {
       recipientId: assignee.id,
       recipientType: NotificationType.assignment,
       title: `Human help requested: ${ticket.title}`,
-      body: `An employee requested human assistance for "${ticket.title}".`
+      body: `An employee requested human assistance for "${ticket.title}". AI conversation history is available for review on the ticket.`
     });
   }
 
@@ -861,4 +915,26 @@ export async function rejectResolution(actor: TicketActor, ticketId: string) {
   }
 
   return updatedTicket;
+}
+
+export async function interceptTicketConversation(actor: TicketActor, ticketId: string) {
+  if (actor.role !== UserRole.admin && actor.role !== UserRole.supervisor) {
+    throw new AppError('Forbidden — only admins and supervisors can intercept conversations', 403, 'FORBIDDEN');
+  }
+
+  const ticket = await loadTicket(ticketId);
+
+  if (!ticket.cometchatConvoId) {
+    throw new AppError('No active conversation on this ticket', 400, 'NO_CONVERSATION');
+  }
+
+  // Add the actor to the ticket's group conversation
+  await addMemberToTicketGroup(ticketId, actor.id, 'admin');
+
+  await appendActivityLog(actor.id, 'conversation_intercepted', 'ticket', ticketId, {
+    interceptedBy: actor.id,
+    role: actor.role,
+  });
+
+  return ticket;
 }

@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
 import { recordActivityLog } from '../activity-logs/activity-logs.service.js';
+import { updateUserTags } from '../cometchat/cometchat-sync.service.js';
 
 const safeUserSelect = {
   id: true,
@@ -133,6 +134,17 @@ export async function updateUser(
     },
     select: safeUserSelect
   });
+
+  // Sync CometChat tags when role or department changes (non-blocking).
+  // Only trigger if the user has a cometchat_uid and something actually changed.
+  const roleChanged = input.role && input.role !== existingUser.role;
+  const departmentChanged = input.department && input.department !== existingUser.department;
+
+  if (roleChanged || departmentChanged) {
+    updateUserTags(userId, updatedUser.role, updatedUser.department).catch((error) => {
+      console.error(`[CometChat] Failed to update tags for user ${userId}:`, error);
+    });
+  }
 
   await recordActivityLog({
     userId: input.actorId,

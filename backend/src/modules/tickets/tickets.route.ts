@@ -10,7 +10,8 @@ import {
   rejectResolutionController,
   requestHumanHelpController,
   listTicketsController,
-  updateTicketController
+  updateTicketController,
+  interceptTicketController
 } from './tickets.controller.js';
 
 import { listCommentsController, createCommentController } from '../comments/comments.controller.js';
@@ -26,6 +27,7 @@ ticketsRouter.post('/:id/request-human-help', asyncHandler(requestHumanHelpContr
 ticketsRouter.post('/:id/confirm-resolution', asyncHandler(confirmResolutionController));
 ticketsRouter.post('/:id/reject-resolution', asyncHandler(rejectResolutionController));
 ticketsRouter.post('/:id/escalate', asyncHandler(escalateTicketController));
+ticketsRouter.post('/:id/intercept', asyncHandler(interceptTicketController));
 
 // Comments
 ticketsRouter.get('/:id/comments', asyncHandler(listCommentsController));

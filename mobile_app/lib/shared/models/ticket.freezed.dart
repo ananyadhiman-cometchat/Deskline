@@ -37,7 +37,10 @@ mixin _$Ticket {
   DateTime get updatedAt =>
       throw _privateConstructorUsedError; // Expanded relations (included in detail/list responses)
   TicketUser? get employee => throw _privateConstructorUsedError;
-  TicketUser? get agent => throw _privateConstructorUsedError;
+  TicketUser? get agent =>
+      throw _privateConstructorUsedError; // CometChat integration fields
+  String? get cometchatConvoId => throw _privateConstructorUsedError;
+  String? get cometchatConvoType => throw _privateConstructorUsedError;
 
   /// Serializes this Ticket to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -70,6 +73,8 @@ abstract class $TicketCopyWith<$Res> {
     DateTime updatedAt,
     TicketUser? employee,
     TicketUser? agent,
+    String? cometchatConvoId,
+    String? cometchatConvoType,
   });
 
   $TicketUserCopyWith<$Res>? get employee;
@@ -107,6 +112,8 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
     Object? updatedAt = null,
     Object? employee = freezed,
     Object? agent = freezed,
+    Object? cometchatConvoId = freezed,
+    Object? cometchatConvoType = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -174,6 +181,14 @@ class _$TicketCopyWithImpl<$Res, $Val extends Ticket>
                 ? _value.agent
                 : agent // ignore: cast_nullable_to_non_nullable
                       as TicketUser?,
+            cometchatConvoId: freezed == cometchatConvoId
+                ? _value.cometchatConvoId
+                : cometchatConvoId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            cometchatConvoType: freezed == cometchatConvoType
+                ? _value.cometchatConvoType
+                : cometchatConvoType // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -233,6 +248,8 @@ abstract class _$$TicketImplCopyWith<$Res> implements $TicketCopyWith<$Res> {
     DateTime updatedAt,
     TicketUser? employee,
     TicketUser? agent,
+    String? cometchatConvoId,
+    String? cometchatConvoType,
   });
 
   @override
@@ -271,6 +288,8 @@ class __$$TicketImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? employee = freezed,
     Object? agent = freezed,
+    Object? cometchatConvoId = freezed,
+    Object? cometchatConvoType = freezed,
   }) {
     return _then(
       _$TicketImpl(
@@ -338,6 +357,14 @@ class __$$TicketImplCopyWithImpl<$Res>
             ? _value.agent
             : agent // ignore: cast_nullable_to_non_nullable
                   as TicketUser?,
+        cometchatConvoId: freezed == cometchatConvoId
+            ? _value.cometchatConvoId
+            : cometchatConvoId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        cometchatConvoType: freezed == cometchatConvoType
+            ? _value.cometchatConvoType
+            : cometchatConvoType // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -363,6 +390,8 @@ class _$TicketImpl implements _Ticket {
     required this.updatedAt,
     this.employee,
     this.agent,
+    this.cometchatConvoId,
+    this.cometchatConvoType,
   });
 
   factory _$TicketImpl.fromJson(Map<String, dynamic> json) =>
@@ -401,10 +430,15 @@ class _$TicketImpl implements _Ticket {
   final TicketUser? employee;
   @override
   final TicketUser? agent;
+  // CometChat integration fields
+  @override
+  final String? cometchatConvoId;
+  @override
+  final String? cometchatConvoType;
 
   @override
   String toString() {
-    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, resolvedAt: $resolvedAt, closedAt: $closedAt, createdAt: $createdAt, updatedAt: $updatedAt, employee: $employee, agent: $agent)';
+    return 'Ticket(id: $id, title: $title, description: $description, category: $category, subType: $subType, priority: $priority, status: $status, employeeId: $employeeId, agentId: $agentId, lastActivityAt: $lastActivityAt, resolvedAt: $resolvedAt, closedAt: $closedAt, createdAt: $createdAt, updatedAt: $updatedAt, employee: $employee, agent: $agent, cometchatConvoId: $cometchatConvoId, cometchatConvoType: $cometchatConvoType)';
   }
 
   @override
@@ -437,7 +471,11 @@ class _$TicketImpl implements _Ticket {
                 other.updatedAt == updatedAt) &&
             (identical(other.employee, employee) ||
                 other.employee == employee) &&
-            (identical(other.agent, agent) || other.agent == agent));
+            (identical(other.agent, agent) || other.agent == agent) &&
+            (identical(other.cometchatConvoId, cometchatConvoId) ||
+                other.cometchatConvoId == cometchatConvoId) &&
+            (identical(other.cometchatConvoType, cometchatConvoType) ||
+                other.cometchatConvoType == cometchatConvoType));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -460,6 +498,8 @@ class _$TicketImpl implements _Ticket {
     updatedAt,
     employee,
     agent,
+    cometchatConvoId,
+    cometchatConvoType,
   );
 
   /// Create a copy of Ticket
@@ -494,6 +534,8 @@ abstract class _Ticket implements Ticket {
     required final DateTime updatedAt,
     final TicketUser? employee,
     final TicketUser? agent,
+    final String? cometchatConvoId,
+    final String? cometchatConvoType,
   }) = _$TicketImpl;
 
   factory _Ticket.fromJson(Map<String, dynamic> json) = _$TicketImpl.fromJson;
@@ -529,7 +571,11 @@ abstract class _Ticket implements Ticket {
   @override
   TicketUser? get employee;
   @override
-  TicketUser? get agent;
+  TicketUser? get agent; // CometChat integration fields
+  @override
+  String? get cometchatConvoId;
+  @override
+  String? get cometchatConvoType;
 
   /// Create a copy of Ticket
   /// with the given fields replaced by the non-null parameter values.

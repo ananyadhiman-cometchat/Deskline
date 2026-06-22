@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../cometchat/widgets/incoming_call_widget.dart';
 import '../core/animations/page_transitions.dart';
 import '../core/layout/main_scaffold.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -28,7 +29,7 @@ import '../features/admin/presentation/analytics_screen.dart';
 import '../features/admin/presentation/send_announcement_screen.dart';
 import '../shared/enums/enums.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _rootNavigatorKey = callNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {

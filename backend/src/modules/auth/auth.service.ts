@@ -12,6 +12,8 @@ import {
   signAccessToken
 } from '../../lib/token.js';
 import { recordActivityLog } from '../activity-logs/activity-logs.service.js';
+import { ensureUserAndGenerateToken } from '../cometchat/cometchat-auth.service.js';
+import { syncNewUser } from '../cometchat/cometchat-sync.service.js';
 
 const safeUserSelect = {
   id: true,
@@ -41,6 +43,21 @@ function buildTokens(user: SafeUser, refreshToken: string) {
     }),
     refreshToken
   };
+}
+
+/**
+ * Attempt to generate a CometChat auth token for the user.
+ * Returns null if generation fails — login/register must not be blocked
+ * by CometChat unavailability (Requirement 2.5: graceful degradation).
+ */
+async function tryGenerateCometChatToken(userId: string): Promise<string | null> {
+  try {
+    return await ensureUserAndGenerateToken(userId);
+  } catch {
+    // Log but don't block login. Client can fetch token later via /api/cometchat/auth-token
+    console.warn(`[CometChat] Failed to generate auth token for user ${userId} during login`);
+    return null;
+  }
 }
 
 async function createSession(userId: string) {
@@ -96,9 +113,20 @@ export async function registerUser(input: {
     }
   });
 
+  // Sync new user to CometChat in background (non-blocking).
+  // If sync fails, user will have null cometchat_uid and can be retried later via retryPendingSync.
+  syncNewUser({ id: user.id, name: user.name, role: user.role, department: user.department }).catch(
+    (error) => {
+      console.error(`[CometChat] Failed to sync new user ${user.id}:`, error);
+    }
+  );
+
+  const cometchatAuthToken = await tryGenerateCometChatToken(user.id);
+
   return {
     user: toSafeUser(user),
-    ...buildTokens(user, refreshToken)
+    ...buildTokens(user, refreshToken),
+    cometchatAuthToken
   };
 }
 
@@ -150,9 +178,12 @@ export async function loginUser(input: { email: string; password: string }) {
     }
   });
 
+  const cometchatAuthToken = await tryGenerateCometChatToken(user.id);
+
   return {
     user: toSafeUser(safeUser),
-    ...buildTokens(safeUser, refreshToken)
+    ...buildTokens(safeUser, refreshToken),
+    cometchatAuthToken
   };
 }
 

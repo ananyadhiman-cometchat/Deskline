@@ -13,7 +13,13 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_REFRESH_SECRET: z.string().min(1),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d')
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  // CometChat (server-side only)
+  COMETCHAT_APP_ID: z.string().optional(),
+  COMETCHAT_REGION: z.string().optional(),
+  COMETCHAT_REST_API_KEY: z.string().optional(),
+  COMETCHAT_WEBHOOK_SECRET: z.string().optional(),
+  COMETCHAT_AI_AGENT_UID: z.string().optional()
 });
 
 const inputEnv =
