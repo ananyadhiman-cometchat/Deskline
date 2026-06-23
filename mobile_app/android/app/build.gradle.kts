@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.deskline"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -21,7 +21,7 @@ android {
         applicationId = "com.example.deskline"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -48,4 +48,15 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+
+// The CometChat chat-sdk-android pulls in the legacy com.android.support:*:26.1.0
+// library transitively, which collides with AndroidX (duplicate classes like
+// android.support.v4.app.INotificationSideChannel). AGP 9 dropped Jetifier, so
+// we exclude the entire old support group — the SDK itself targets AndroidX and
+// does not use these legacy classes at runtime.
+configurations.all {
+    exclude(group = "com.android.support")
+    exclude(group = "android.arch.lifecycle")
+    exclude(group = "android.arch.core")
 }

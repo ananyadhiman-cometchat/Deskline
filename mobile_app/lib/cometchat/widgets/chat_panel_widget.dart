@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/theme/theme_provider.dart';
 import '../../shared/enums/ticket_status.dart';
 
 /// Conversation type for the CometChat chat panel.
@@ -13,16 +18,12 @@ enum ConversationType {
 
 /// A widget that displays the CometChat chat panel for a ticket.
 ///
-/// This widget renders the CometChat messaging UI (CometChatMessages)
-/// embedded within the ticket detail page. It supports both 1:1 conversations
-/// (conversation tickets) and group conversations (escalation tickets).
+/// Syncs [CometChatThemeMode.mode] to the app's current [ThemeMode] and
+/// injects a matching [CometChatColorPalette] via Flutter's Theme extension
+/// mechanism so CometChat widgets respect dark/light mode automatically.
 ///
-/// The widget handles:
-/// - Loading state while CometChat initializes
-/// - Displaying a placeholder when no conversation exists
-/// - Hiding the message composer when the ticket is resolved/closed
-/// - Both 1:1 (User) and group (Group) conversation rendering
-class ChatPanelWidget extends StatefulWidget {
+/// Tap the expand icon in the header to open a fullscreen chat overlay.
+class ChatPanelWidget extends ConsumerStatefulWidget {
   /// The CometChat conversation ID stored on the ticket.
   final String conversationId;
 
@@ -54,12 +55,14 @@ class ChatPanelWidget extends StatefulWidget {
         );
 
   @override
-  State<ChatPanelWidget> createState() => _ChatPanelWidgetState();
+  ConsumerState<ChatPanelWidget> createState() => _ChatPanelWidgetState();
 }
 
-class _ChatPanelWidgetState extends State<ChatPanelWidget> {
+class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
   bool _isLoading = true;
   String? _error;
+  User? _resolvedUser;
+  Group? _resolvedGroup;
 
   @override
   void initState() {
@@ -69,16 +72,47 @@ class _ChatPanelWidgetState extends State<ChatPanelWidget> {
 
   Future<void> _initializeChat() async {
     try {
-      // Allow CometChat SDK to be ready before rendering messages.
-      // The actual SDK init is handled by the cometchat_init module (task 10.1).
-      // Here we just add a brief delay to ensure the widget tree is stable.
-      await Future.delayed(const Duration(milliseconds: 300));
+      final bool isGroup = widget.conversationType == ConversationType.group;
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (isGroup && widget.groupId != null) {
+        // Fetch the real group from CometChat so the header shows the correct
+        // name, member count, and avatar (not "0 Members" from an empty object).
+        final completer = Completer<Group>();
+        CometChat.getGroup(
+          widget.groupId!,
+          onSuccess: (Group group) {
+            if (!completer.isCompleted) completer.complete(group);
+          },
+          onError: (CometChatException e) {
+            // Fallback: construct a group with the GUID as the name
+            if (!completer.isCompleted) {
+              completer.complete(
+                Group(guid: widget.groupId!, name: widget.groupId!, type: 'private'),
+              );
+            }
+          },
+        );
+        _resolvedGroup = await completer.future;
+      } else if (!isGroup && widget.recipientUid != null) {
+        // Fetch the real user for 1:1 conversations.
+        final completer = Completer<User>();
+        CometChat.getUser(
+          widget.recipientUid!,
+          onSuccess: (User user) {
+            if (!completer.isCompleted) completer.complete(user);
+          },
+          onError: (CometChatException e) {
+            if (!completer.isCompleted) {
+              completer.complete(
+                User(uid: widget.recipientUid!, name: widget.recipientUid!),
+              );
+            }
+          },
+        );
+        _resolvedUser = await completer.future;
       }
+
+      if (mounted) setState(() => _isLoading = false);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -89,23 +123,20 @@ class _ChatPanelWidgetState extends State<ChatPanelWidget> {
     }
   }
 
-  /// Whether the message composer should be hidden.
-  /// Hides composer when ticket is resolved or closed (read-only mode).
   bool get _hideComposer =>
       widget.ticketStatus == TicketStatus.resolved ||
       widget.ticketStatus == TicketStatus.closed;
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return _buildLoadingState();
-    }
+    // Keep CometChatThemeMode in sync with the app's ThemeMode so all
+    // CometChatThemeHelper.getBrightness() calls return the right value.
+    final themeMode = ref.watch(themeModeProvider);
+    CometChatThemeMode.mode = themeMode;
 
-    if (_error != null) {
-      return _buildErrorState();
-    }
-
-    return _buildChatPanel();
+    if (_isLoading) return _buildLoadingState();
+    if (_error != null) return _buildErrorState();
+    return _buildChatPanel(context);
   }
 
   Widget _buildLoadingState() {
@@ -123,10 +154,7 @@ class _ChatPanelWidgetState extends State<ChatPanelWidget> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text(
-              'Loading chat...',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
+            Text('Loading chat...', style: TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
       ),
@@ -146,32 +174,15 @@ class _ChatPanelWidgetState extends State<ChatPanelWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 32,
-              color: Theme.of(context).colorScheme.error,
-            ),
+            Icon(Icons.chat_bubble_outline, size: 32, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 12),
-            Text(
-              'Chat unavailable',
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.error,
-              ),
-            ),
+            Text('Chat unavailable', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error)),
             const SizedBox(height: 4),
-            Text(
-              _error ?? 'An error occurred',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
+            Text(_error ?? 'An error occurred', style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
             const SizedBox(height: 12),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _error = null;
-                });
+                setState(() { _isLoading = true; _error = null; });
                 _initializeChat();
               },
               child: const Text('Retry'),
@@ -182,191 +193,249 @@ class _ChatPanelWidgetState extends State<ChatPanelWidget> {
     );
   }
 
-  /// Builds the CometChat messages panel.
-  ///
-  /// Uses CometChatMessages from the Flutter UI Kit, configured with
-  /// either a User (1:1) or Group (group chat) object.
-  ///
-  /// Note: The actual CometChat widget integration requires the
-  /// `cometchat_chat_uikit` package. This widget provides the container
-  /// and configuration; the CometChatMessages widget renders the full
-  /// messaging experience (message list, composer, header).
-  Widget _buildChatPanel() {
-    // Placeholder for CometChatMessages widget from Flutter UI Kit.
-    // Once `cometchat_chat_uikit` is added to pubspec.yaml, this will be:
-    //
-    // if (widget.conversationType == ConversationType.oneOnOne) {
-    //   final user = User(uid: widget.recipientUid!, name: '');
-    //   return CometChatMessages(
-    //     user: user,
-    //     hideMessageComposer: _hideComposer,
-    //   );
-    // } else {
-    //   final group = Group(
-    //     guid: widget.groupId!,
-    //     name: '',
-    //     type: 'public',
-    //   );
-    //   return CometChatMessages(
-    //     group: group,
-    //     hideMessageComposer: _hideComposer,
-    //   );
-    // }
+  Widget _buildChatPanel(BuildContext context) {
+    final User? user = _resolvedUser;
+    final Group? group = _resolvedGroup;
 
-    return Container(
-      height: 400,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+    if (user == null && group == null) return const NoChatPlaceholder();
+
+    return _withCometChatPalette(
+      context,
+      child: Container(
+        height: 460,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          // Chat header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: Row(
+        child: Column(
+          children: [
+            // Header row: CometChat header + expand button
+            Stack(
               children: [
-                Icon(
-                  widget.conversationType == ConversationType.group
-                      ? Icons.group
-                      : Icons.chat_bubble_outline,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.conversationType == ConversationType.group
-                      ? 'Group Chat'
-                      : 'Direct Chat',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                if (_hideComposer)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Read-only',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange,
-                        fontWeight: FontWeight.w500,
-                      ),
+                CometChatMessageHeader(user: user, group: group),
+                Positioned(
+                  right: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      tooltip: 'Expand to fullscreen',
+                      icon: const Icon(Icons.open_in_full, size: 18),
+                      onPressed: () => _openFullscreen(context, user, group),
                     ),
                   ),
+                ),
               ],
             ),
-          ),
-          // Message area placeholder — will be replaced by CometChatMessages
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.chat,
-                    size: 48,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'CometChat Messages',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Conversation: ${widget.conversationId}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  if (widget.conversationType == ConversationType.oneOnOne &&
-                      widget.recipientUid != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Recipient: ${widget.recipientUid}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                  if (widget.conversationType == ConversationType.group &&
-                      widget.groupId != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Group: ${widget.groupId}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ],
-              ),
+            Expanded(
+              child: CometChatMessageList(user: user, group: group),
             ),
-          ),
-          // Composer area (hidden when read-only)
-          if (!_hideComposer)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'Type a message...',
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.send,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
-              ),
+            if (!_hideComposer)
+              CometChatMessageComposer(user: user, group: group)
+            else
+              _ReadOnlyBanner(ticketStatus: widget.ticketStatus),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFullscreen(BuildContext context, User? user, Group? group) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _FullscreenChatPage(
+          user: user,
+          group: group,
+          hideComposer: _hideComposer,
+          ticketStatus: widget.ticketStatus,
+        ),
+      ),
+    );
+  }
+}
+
+/// Injects a [CometChatColorPalette] into the Flutter Theme extension tree so
+/// that all CometChat widgets below pick up the correct dark/light colours via
+/// [CometChatThemeHelper.getColorPalette].
+///
+/// Uses the V5 ThemeExtension pattern — there is no CometChatThemeProvider
+/// widget in V5; the palette is injected directly through Flutter's own
+/// [Theme.of(context).extensions] mechanism.
+Widget _withCometChatPalette(BuildContext context, {required Widget child}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  final palette = isDark ? _darkPalette : _lightPalette;
+
+  return Theme(
+    data: Theme.of(context).copyWith(
+      extensions: [
+        ...Theme.of(context).extensions.values,
+        palette,
+      ],
+    ),
+    child: child,
+  );
+}
+
+/// Dark colour palette for CometChat — zinc/near-black surfaces.
+final _darkPalette = CometChatColorPalette(
+  primary: const Color(0xFFFF4655),
+  // Backgrounds: background1 = card, background2 = input, background3 = hover, background4 = divider
+  background1: const Color(0xFF09090B),
+  background2: const Color(0xFF18181B),
+  background3: const Color(0xFF27272A),
+  background4: const Color(0xFF3F3F46),
+  // Neutrals (text, icons)
+  neutral100: const Color(0xFFF8FAFC),
+  neutral200: const Color(0xFFE4E4E7),
+  neutral300: const Color(0xFFA1A1AA),
+  neutral400: const Color(0xFF71717A),
+  neutral500: const Color(0xFF52525B),
+  neutral600: const Color(0xFF3F3F46),
+  neutral700: const Color(0xFF27272A),
+  neutral800: const Color(0xFF18181B),
+  neutral900: const Color(0xFF09090B),
+  // Borders
+  borderLight: const Color(0xFF27272A),
+  borderDefault: const Color(0xFF3F3F46),
+  borderDark: const Color(0xFF52525B),
+  // Text
+  textPrimary: const Color(0xFFF8FAFC),
+  textSecondary: const Color(0xFFA1A1AA),
+  textTertiary: const Color(0xFF71717A),
+  textDisabled: const Color(0xFF52525B),
+  textWhite: const Color(0xFFFFFFFF),
+  // Icons
+  iconPrimary: const Color(0xFFF8FAFC),
+  iconSecondary: const Color(0xFFA1A1AA),
+  iconTertiary: const Color(0xFF71717A),
+  iconWhite: const Color(0xFFFFFFFF),
+  // Alerts
+  error: const Color(0xFFEF4444),
+  warning: const Color(0xFFF59E0B),
+  success: const Color(0xFF10B981),
+  info: const Color(0xFF3B82F6),
+  // Buttons
+  buttonBackground: const Color(0xFFFF4655),
+  buttonText: const Color(0xFFFFFFFF),
+);
+
+/// Light colour palette for CometChat — white surfaces.
+final _lightPalette = CometChatColorPalette(
+  primary: const Color(0xFFFF4655),
+  background1: const Color(0xFFFFFFFF),
+  background2: const Color(0xFFF7F7F7),
+  background3: const Color(0xFFE5E7EB),
+  background4: const Color(0xFFD1D5DB),
+  neutral100: const Color(0xFF0F1923),
+  neutral200: const Color(0xFF374151),
+  neutral300: const Color(0xFF6B7280),
+  neutral400: const Color(0xFF9CA3AF),
+  neutral500: const Color(0xFFD1D5DB),
+  neutral600: const Color(0xFFE5E7EB),
+  neutral700: const Color(0xFFF3F4F6),
+  neutral800: const Color(0xFFF9FAFB),
+  neutral900: const Color(0xFFFFFFFF),
+  borderLight: const Color(0xFFE5E7EB),
+  borderDefault: const Color(0xFFD1D5DB),
+  borderDark: const Color(0xFF9CA3AF),
+  textPrimary: const Color(0xFF0F1923),
+  textSecondary: const Color(0xFF6B7280),
+  textTertiary: const Color(0xFF9CA3AF),
+  textDisabled: const Color(0xFFD1D5DB),
+  textWhite: const Color(0xFFFFFFFF),
+  iconPrimary: const Color(0xFF0F1923),
+  iconSecondary: const Color(0xFF6B7280),
+  iconTertiary: const Color(0xFF9CA3AF),
+  iconWhite: const Color(0xFFFFFFFF),
+  error: const Color(0xFFEF4444),
+  warning: const Color(0xFFF59E0B),
+  success: const Color(0xFF10B981),
+  info: const Color(0xFF3B82F6),
+  buttonBackground: const Color(0xFFFF4655),
+  buttonText: const Color(0xFFFFFFFF),
+);
+
+/// Full-screen chat page pushed by the expand button in [ChatPanelWidget].
+class _FullscreenChatPage extends ConsumerWidget {
+  final User? user;
+  final Group? group;
+  final bool hideComposer;
+  final TicketStatus ticketStatus;
+
+  const _FullscreenChatPage({
+    required this.user,
+    required this.group,
+    required this.hideComposer,
+    required this.ticketStatus,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    CometChatThemeMode.mode = themeMode;
+
+    final title = (user?.name.isNotEmpty ?? false)
+        ? user!.name
+        : (group?.name.isNotEmpty ?? false)
+            ? group!.name
+            : 'Chat';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        leading: IconButton(
+          icon: const Icon(Icons.close_fullscreen),
+          tooltip: 'Exit fullscreen',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: _withCometChatPalette(
+        context,
+        child: Column(
+          children: [
+            CometChatMessageHeader(user: user, group: group),
+            Expanded(
+              child: CometChatMessageList(user: user, group: group),
             ),
-        ],
+            if (!hideComposer)
+              CometChatMessageComposer(user: user, group: group)
+            else
+              _ReadOnlyBanner(ticketStatus: ticketStatus),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Read-only banner shown instead of the composer when a ticket is resolved/closed.
+class _ReadOnlyBanner extends StatelessWidget {
+  final TicketStatus ticketStatus;
+
+  const _ReadOnlyBanner({required this.ticketStatus});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+      child: Text(
+        'This conversation is read-only — the ticket has been '
+        '${ticketStatus == TicketStatus.resolved ? "resolved" : "closed"}.',
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -390,19 +459,11 @@ class NoChatPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 32,
-              color: Colors.grey,
-            ),
+            Icon(Icons.chat_bubble_outline, size: 32, color: Colors.grey),
             SizedBox(height: 8),
             Text(
               'No active chat',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey),
             ),
             SizedBox(height: 4),
             Text(

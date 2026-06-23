@@ -142,19 +142,13 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
           const SizedBox(height: AppSpacing.xl),
         ],
 
-        // ─── Communication Thread ───────────────────────────
-        const SectionHeader(title: 'COMMUNICATION'),
-        const SizedBox(height: AppSpacing.sm),
-        CommunicationThread(
-          ticketId: widget.ticketId,
-          ticketStatus: ticket.status,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
-        // ─── CometChat Panel (when conversation exists) ─────
+        // ─── Communication ──────────────────────────────────
+        // Mirrors the web: when a CometChat conversation exists, the
+        // CometChat chat REPLACES the legacy comment thread. Otherwise the
+        // legacy thread is shown as a fallback.
         if (ticket.cometchatConvoId != null &&
             ticket.cometchatConvoId!.isNotEmpty) ...[
-          // ─── Call Buttons (conversation/escalation tickets) ──
+          // Header row with optional call buttons
           if ((ticket.subType == TicketSubtype.conversation ||
                   ticket.subType == TicketSubtype.escalation) &&
               ticket.status != TicketStatus.closed &&
@@ -162,38 +156,36 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
               ticket.agentId != null) ...[
             Row(
               children: [
-                const Expanded(child: SectionHeader(title: 'LIVE CHAT')),
+                const Expanded(child: SectionHeader(title: 'COMMUNICATION')),
                 CallButtonsWidget(
                   recipientUid: userRole == UserRole.employee
                       ? ticket.agentId!
                       : ticket.employeeId,
+                  groupId: ticket.cometchatConvoId,
                 ),
               ],
             ),
           ] else ...[
-            const SectionHeader(title: 'LIVE CHAT'),
+            const SectionHeader(title: 'COMMUNICATION'),
           ],
           const SizedBox(height: AppSpacing.sm),
+          // Backend always creates private groups (never 1:1) — see cometchat-chat.service.ts
           ChatPanelWidget(
             conversationId: ticket.cometchatConvoId!,
-            conversationType:
-                ticket.cometchatConvoType == 'group'
-                    ? ConversationType.group
-                    : ConversationType.oneOnOne,
+            conversationType: ConversationType.group,
             ticketStatus: ticket.status,
-            recipientUid: ticket.cometchatConvoType != 'group'
-                ? ticket.agentId ?? ticket.employeeId
-                : null,
-            groupId: ticket.cometchatConvoType == 'group'
-                ? ticket.cometchatConvoId
-                : null,
+            groupId: ticket.cometchatConvoId,
           ),
           const SizedBox(height: AppSpacing.xl),
-        ] else if (ticket.subType == TicketSubtype.conversation ||
-            ticket.subType == TicketSubtype.escalation) ...[
-          const SectionHeader(title: 'LIVE CHAT'),
+        ] else ...[
+          // No CometChat conversation yet — fall back to the legacy
+          // comment-based communication thread.
+          const SectionHeader(title: 'COMMUNICATION'),
           const SizedBox(height: AppSpacing.sm),
-          const NoChatPlaceholder(),
+          CommunicationThread(
+            ticketId: widget.ticketId,
+            ticketStatus: ticket.status,
+          ),
           const SizedBox(height: AppSpacing.xl),
         ],
 

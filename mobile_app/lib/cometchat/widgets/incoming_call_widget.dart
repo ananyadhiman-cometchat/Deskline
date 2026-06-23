@@ -392,9 +392,9 @@ class _AcceptedCallScreenState extends State<_AcceptedCallScreen> {
   }
 
   Future<void> _endCall() async {
+    // Leave the WebRTC session — CometChatOngoingCallService does not exist
+    // in cometchat_calls_sdk 5.x; leaveSession() is the correct cleanup.
     await CallSession.getInstance()?.leaveSession();
-    await CometChatOngoingCallService.abort();
-
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }

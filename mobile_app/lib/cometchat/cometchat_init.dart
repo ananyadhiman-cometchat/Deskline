@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
 import '../core/networking/api_endpoints.dart';
@@ -88,12 +89,119 @@ class CometChatInitializer {
     // Step 1: Initialize the SDK with retry
     final initResult = await _initSdkWithRetry();
     if (!initResult.isInitialized) {
+      // ignore: avoid_print
+      print('[CometChatInit] ✗ SDK init failed: ${initResult.error}');
       return initResult;
     }
+    // ignore: avoid_print
+    print('[CometChatInit] ✓ SDK init succeeded');
 
-    // Step 2: Fetch auth token from backend and login with retry
+    // Step 2: Fetch auth token from backend and login with retry.
+    // The auth token is captured so the Calls SDK can reuse it.
     final loginResult = await _loginWithRetry(dioClient);
+    if (!loginResult.isInitialized) {
+      // ignore: avoid_print
+      print('[CometChatInit] ✗ Login failed: ${loginResult.error}');
+      return loginResult;
+    }
+    // ignore: avoid_print
+    print('[CometChatInit] ✓ Login succeeded');
+
+    // Step 3: Initialize + login the Calls SDK (v5 has its own lifecycle).
+    // Non-fatal: chat still works if calls init fails, but calling won't.
+    await _initCallsSdk();
+    // ignore: avoid_print
+    print('[CometChatInit] ✓ Calls SDK init complete');
+
     return loginResult;
+  }
+
+  /// The CometChat auth token captured during chat login, reused for the
+  /// Calls SDK login (so we don't fetch a second token).
+  String? _capturedAuthToken;
+
+  /// Initialize and login the v5 Calls SDK so voice/video calling works.
+  ///
+  /// Mirrors the web's [initCallsWithRetry] pattern: exponential backoff with
+  /// up to [_maxRetries] attempts (1 s, 2 s, 4 s delays). Non-fatal — chat
+  /// features remain functional even if calls init fails.
+  Future<void> _initCallsSdk() async {
+    try {
+      await _initCallsSdkWithRetry();
+      await _loginCallsSdkWithRetry();
+    } catch (e) {
+      // ignore: avoid_print
+      print('[CometChat] Calls SDK init/login failed: $e');
+    }
+  }
+
+  /// Init the Calls SDK with exponential backoff, matching the web's
+  /// [initCallsWithRetry] implementation.
+  Future<void> _initCallsSdkWithRetry() async {
+    Object? lastError;
+
+    for (int attempt = 0; attempt < _maxRetries; attempt++) {
+      try {
+        final callAppSettings = (CallAppSettingBuilder()
+              ..appId = CometChatConfig.appId
+              ..region = CometChatConfig.region)
+            .build();
+
+        final completer = Completer<void>();
+        CometChatCalls.init(
+          callAppSettings,
+          onSuccess: (_) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (CometChatCallsException e) {
+            if (!completer.isCompleted) completer.completeError(e);
+          },
+        );
+        await completer.future;
+        return; // success
+      } catch (e) {
+        lastError = e;
+        if (attempt < _maxRetries - 1) {
+          await Future.delayed(Duration(seconds: 1 << attempt)); // 1s, 2s, 4s
+        }
+      }
+    }
+
+    throw lastError ?? Exception('Calls SDK init failed');
+  }
+
+  /// Login the Calls SDK with exponential backoff, matching the web pattern.
+  Future<void> _loginCallsSdkWithRetry() async {
+    final authToken = _capturedAuthToken ?? await CometChat.getUserAuthToken();
+    if (authToken == null || authToken.isEmpty) {
+      return; // Can't login calls without a token; chat still works.
+    }
+
+    Object? lastError;
+
+    for (int attempt = 0; attempt < _maxRetries; attempt++) {
+      try {
+        final completer = Completer<void>();
+        CometChatCalls.loginWithAuthToken(
+          authToken: authToken,
+          onSuccess: (_) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (CometChatCallsException e) {
+            if (!completer.isCompleted) completer.completeError(e);
+          },
+        );
+        await completer.future;
+        return; // success
+      } catch (e) {
+        lastError = e;
+        if (attempt < _maxRetries - 1) {
+          await Future.delayed(Duration(seconds: 1 << attempt));
+        }
+      }
+    }
+
+    throw lastError ?? Exception('Calls SDK login failed');
   }
 
   /// Initialize CometChatUIKit with retry and exponential backoff.
@@ -159,6 +267,9 @@ class CometChatInitializer {
         if (authToken == null || authToken.isEmpty) {
           throw Exception('Auth token not found in response');
         }
+
+        // Capture for Calls SDK login reuse
+        _capturedAuthToken = authToken;
 
         // Login to CometChat with the auth token
         final loginCompleter = Completer<void>();

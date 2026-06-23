@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../cometchat/providers/cometchat_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/notifications/providers/notification_provider.dart';
 import '../../shared/enums/enums.dart';
@@ -18,18 +19,38 @@ import '../utils/responsive.dart';
 /// Matches the web's AppLayout pattern with sidebar + topbar.
 /// On mobile: bottom nav with up to 5 items per role.
 /// On tablet: NavigationRail on the left side.
-class MainScaffold extends ConsumerWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainScaffold({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize CometChat (Chat SDK + Calls SDK) once the authenticated
+    // shell mounts. This MUST run before any chat/call feature is used —
+    // calling CometChat.initiateCall before init throws the
+    // "Please call the CometChat.init() method" error.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authStateProvider);
+      if (authState.isAuthenticated) {
+        ref.read(cometchatProvider.notifier).initialize();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final colors = DesklineColors.of(context);
     final user = authState.user;
 
-    if (user == null) return child;
+    if (user == null) return widget.child;
 
     final navItems = _navItemsForRole(user.role);
     final currentIndex = _currentNavIndex(context, navItems);
@@ -49,10 +70,10 @@ class MainScaffold extends ConsumerWidget {
                   currentIndex,
                 ),
                 const VerticalDivider(width: 1, thickness: 1),
-                Expanded(child: _buildContent(context, colors, child)),
+                Expanded(child: _buildContent(context, colors, widget.child)),
               ],
             )
-          : _buildContent(context, colors, child),
+          : _buildContent(context, colors, widget.child),
       bottomNavigationBar: isTablet
           ? null
           : _buildBottomNav(context, colors, navItems, currentIndex),

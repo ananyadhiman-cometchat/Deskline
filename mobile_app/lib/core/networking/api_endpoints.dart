@@ -3,9 +3,13 @@
 class ApiEndpoints {
   const ApiEndpoints._();
 
-  /// Base URL pointing to the staging server.
-  /// Both Android and iOS use the same remote URL.
-  static const String baseUrl = 'https://deskline.cometchat-staging.com/api';
+  /// Base URL for the DeskLine backend.
+  ///
+  /// Android emulator: use 10.0.2.2 to reach the host machine's localhost
+  /// (the Docker backend exposed on port 4000).
+  /// iOS simulator: use localhost / 127.0.0.1.
+  /// Staging: https://deskline.cometchat-staging.com/api
+  static const String baseUrl = 'http://10.0.2.2:4000/api';
 
   // Auth
   static const String login = '/auth/login';

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/networking/dio_provider.dart';
 import '../cometchat_init.dart';
+import '../services/cometchat_push_service.dart';
 
 /// State representing CometChat initialization status.
 class CometChatState {
@@ -56,7 +58,10 @@ class CometChatNotifier extends StateNotifier<CometChatState> {
 
     if (result.isInitialized) {
       state = const CometChatState(isInitialized: true);
+      debugPrint('[CometChatProvider] ✓ Initialized successfully');
+      CometChatPushService.registerToken();
     } else {
+      debugPrint('[CometChatProvider] ✗ Init failed: ${result.error}');
       state = CometChatState(error: result.error);
     }
   }

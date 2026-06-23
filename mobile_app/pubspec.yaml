@@ -27,6 +27,9 @@ dependencies:
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
 
+  # Permissions (camera, microphone for calls)
+  permission_handler: ^11.3.1
+
   # Local Notifications (foreground system tray display)
   flutter_local_notifications: ^18.0.1
 
