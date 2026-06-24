@@ -205,8 +205,9 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
     return _withCometChatPalette(
       context,
       child: Container(
-        // Expand to fill available space (no fixed height)
-        constraints: const BoxConstraints(minHeight: 500),
+        // Fixed height so Column children resolve correctly inside a ListView
+        // (ListView provides unbounded height — Expanded cannot work there).
+        height: 500,
         decoration: BoxDecoration(
           // Use darker background in dark mode for better contrast
           color: isDark ? const Color(0xFF0F0F11) : Theme.of(context).colorScheme.surface,
@@ -264,7 +265,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
                 ],
               ),
             ),
-            // Message list — fills all remaining space
+            // Message list — fills remaining space within the bounded Container
             Expanded(
               child: CometChatMessageList(
                 user: user,
@@ -447,7 +448,11 @@ CometChatMessageTemplate _meetingMessageTemplate() {
         {AdditionalConfigurations? additionalConfigurations}) {
       final customData = (message as CustomMessage).customData ?? {};
       final callType = customData['callType'] ?? 'audio';
-      final sessionId = (customData['sessionId'] ?? '') as String;
+      // Read sessionId from any of the key variants the web kit / SDK may use.
+      final sessionId = (customData['sessionID'] ??
+          customData['sessionId'] ??
+          customData['sessionid'] ??
+          '') as String;
       final sentAt = message.sentAt;
       final dateStr = sentAt != null
           ? '${sentAt.day} ${_monthName(sentAt.month)}, ${sentAt.hour.toString().padLeft(2, '0')}:${sentAt.minute.toString().padLeft(2, '0')} ${sentAt.hour >= 12 ? 'PM' : 'AM'}'
@@ -553,39 +558,74 @@ class _FullscreenChatPage extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     CometChatThemeMode.mode = themeMode;
 
-    final title = (user?.name.isNotEmpty ?? false)
-        ? user!.name
-        : (group?.name.isNotEmpty ?? false)
-            ? group!.name
-            : 'Chat';
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        leading: IconButton(
-          icon: const Icon(Icons.close_fullscreen),
-          tooltip: 'Exit fullscreen',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: _withCometChatPalette(
-        context,
-        child: Column(
-          children: [
-            CometChatMessageHeader(user: user, group: group),
-            Expanded(
-              child: CometChatMessageList(
-                user: user,
-                group: group,
-                addTemplate: [_meetingMessageTemplate()],
-                messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+      body: SafeArea(
+        child: _withCometChatPalette(
+          context,
+          child: Column(
+            children: [
+              // Single header row: group/user name + exit fullscreen icon (right)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        group?.name ?? user?.name ?? 'Chat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (group != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Text(
+                          '${group!.membersCount} Members',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    IconButton(
+                      tooltip: 'Exit fullscreen',
+                      icon: const Icon(Icons.close_fullscreen, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (!hideComposer)
-              CometChatMessageComposer(user: user, group: group)
-            else
-              _ReadOnlyBanner(ticketStatus: ticketStatus),
-          ],
+              // Message list — fills all available space
+              Expanded(
+                child: CometChatMessageList(
+                  user: user,
+                  group: group,
+                  addTemplate: [_meetingMessageTemplate()],
+                  messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+                ),
+              ),
+              // Composer — fits at the bottom with no clipping
+              if (!hideComposer)
+                CometChatMessageComposer(user: user, group: group)
+              else
+                _ReadOnlyBanner(ticketStatus: ticketStatus),
+            ],
+          ),
         ),
       ),
     );

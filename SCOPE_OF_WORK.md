@@ -546,6 +546,68 @@ All notifications funnel through `createNotification()` in the backend, which:
 
 ---
 
+## Voice & Video Calling Mechanism
+
+All ticket conversations in DeskLine are **group-based** (private CometChat groups). This drives the calling architecture:
+
+### Group Calls — Meeting Message Pattern (primary)
+
+Since all ticket chats are groups, calls use the **meeting/session** pattern — NOT the ringing channel. This is consistent across web and mobile.
+
+```
+User taps "Call" button
+      ↓
+1. Generate a unique session ID (UUID)
+      ↓
+2. Send a custom message to the group:
+   - type: "meeting"
+   - category: "custom"
+   - customData: { sessionId, callType: "audio"|"video" }
+      ↓
+3. Initiator joins the session immediately via CometChatCalls.joinSession(sessionId)
+      ↓
+4. Other group members see a "meeting card" in chat → tap "Join" → joinSession(sessionId)
+      ↓
+5. On leave/hangup:
+   a. CallSession.leaveSession() — disconnects from WebRTC
+   b. CometChat.endCall(sessionId) — terminates the call in CometChat's signaling system
+   c. Re-initialize Calls SDK for subsequent calls
+      ↓
+6. User returns to ticket detail screen
+```
+
+### Why NOT `CometChat.initiateCall()` for Groups
+
+- `initiateCall()` for groups uses the **ringing channel** which creates sessions that persist even after all participants leave
+- Group call sessions initiated via `initiateCall()` don't auto-terminate — they block new calls ("call ongoing")
+- The CometChat UI Kit's `CometChatMessageHeader` for groups already uses the meeting message pattern internally
+
+### 1:1 Ringing Calls (secondary, if needed)
+
+For direct user-to-user calls outside of groups (not the primary use case):
+- Use `CometChat.initiateCall()` with `receiverType: user`
+- Recipient receives `onIncomingCallReceived` via CallListener
+- On accept: `CometChat.acceptCall(sessionId)` → `CometChatCalls.joinSession(sessionId)`
+- On end: `CallSession.leaveSession()` → `CometChat.endCall(sessionId)`
+
+### Platform Consistency
+
+| Action | Web | Mobile (Flutter) |
+|--------|-----|------------------|
+| Start group call | `CometChatMessageHeader` sends meeting message automatically | `CometChat.sendCustomMessage(type: "meeting")` + `joinSession` |
+| Join group call | Tap meeting card → UI Kit handles join | Tap meeting card → `joinMeetingCall()` → `joinSession` |
+| End call | UI Kit handles `endCall` internally | `CallSession.leaveSession()` + `CometChat.endCall(sessionId)` |
+| Receive 1:1 call | `CometChatIncomingCall` (UI Kit at app root) | `IncomingCallWidget` (Chat SDK CallListener at app root) |
+
+### Key Rules
+
+1. **All ticket calls go through group meeting messages** — never `initiateCall` for groups
+2. **Always call `CometChat.endCall(sessionId)` on hangup** — prevents "call ongoing" blocks
+3. **Re-initialize Calls SDK after session ends** — ensures clean state for next call
+4. **Meeting card in chat** — all group members can see the call history and join active calls
+
+---
+
 ## Assumptions
 
 - Web app is primary; mobile shares the same backend APIs.

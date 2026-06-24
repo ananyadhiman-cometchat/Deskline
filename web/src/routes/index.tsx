@@ -3,29 +3,30 @@ import { AuthGuard } from './AuthGuard'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 
-// Pages — lazy loaded for code splitting
-import { lazy, Suspense } from 'react'
+// Pages — lazy loaded for code splitting with auto-retry on stale chunks
+import { Suspense } from 'react'
+import { lazyWithRetry } from '@/utils/lazyWithRetry'
 
-const LoginPage = lazy(() => import('@/pages/LoginPage'))
-const RegisterPage = lazy(() => import('@/pages/RegisterPage'))
-const EmployeeDashboard = lazy(() => import('@/pages/employee/DashboardPage'))
-const RaiseTicketPage = lazy(() => import('@/pages/employee/RaiseTicketPage'))
-const TicketDetailPage = lazy(() => import('@/pages/shared/TicketDetailPage'))
-const NotificationCentrePage = lazy(() => import('@/pages/shared/NotificationCentrePage'))
-const ProfilePage = lazy(() => import('@/pages/shared/ProfilePage'))
-const LandingPage = lazy(() => import('@/pages/LandingPage'))
-const AgentInboxPage = lazy(() => import('@/pages/agent/InboxPage'))
-const AgentMetricsPage = lazy(() => import('@/pages/agent/AgentMetricsPage'))
-const AgentConversationsPage = lazy(() => import('@/pages/agent/ConversationsPage'))
-const AllTicketsPage = lazy(() => import('@/pages/supervisor/AllTicketsPage'))
-const AgentLoadPage = lazy(() => import('@/pages/supervisor/AgentLoadPage'))
-const SupervisorDashboardPage = lazy(() => import('@/pages/supervisor/SupervisorDashboardPage'))
-const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
-const UserManagementPage = lazy(() => import('@/pages/admin/UserManagementPage'))
-const ActivityLogPage = lazy(() => import('@/pages/admin/ActivityLogPage'))
-const NotificationLogPage = lazy(() => import('@/pages/admin/NotificationLogPage'))
-const AnnouncementsPage = lazy(() => import('@/pages/admin/AnnouncementsPage'))
-const ModerationPage = lazy(() => import('@/pages/admin/ModerationPage'))
+const LoginPage = lazyWithRetry(() => import('@/pages/LoginPage'))
+const RegisterPage = lazyWithRetry(() => import('@/pages/RegisterPage'))
+const EmployeeDashboard = lazyWithRetry(() => import('@/pages/employee/DashboardPage'))
+const RaiseTicketPage = lazyWithRetry(() => import('@/pages/employee/RaiseTicketPage'))
+const TicketDetailPage = lazyWithRetry(() => import('@/pages/shared/TicketDetailPage'))
+const NotificationCentrePage = lazyWithRetry(() => import('@/pages/shared/NotificationCentrePage'))
+const ProfilePage = lazyWithRetry(() => import('@/pages/shared/ProfilePage'))
+const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage'))
+const AgentInboxPage = lazyWithRetry(() => import('@/pages/agent/InboxPage'))
+const AgentMetricsPage = lazyWithRetry(() => import('@/pages/agent/AgentMetricsPage'))
+const AgentConversationsPage = lazyWithRetry(() => import('@/pages/agent/ConversationsPage'))
+const AllTicketsPage = lazyWithRetry(() => import('@/pages/supervisor/AllTicketsPage'))
+const AgentLoadPage = lazyWithRetry(() => import('@/pages/supervisor/AgentLoadPage'))
+const SupervisorDashboardPage = lazyWithRetry(() => import('@/pages/supervisor/SupervisorDashboardPage'))
+const AdminDashboardPage = lazyWithRetry(() => import('@/pages/admin/AdminDashboardPage'))
+const UserManagementPage = lazyWithRetry(() => import('@/pages/admin/UserManagementPage'))
+const ActivityLogPage = lazyWithRetry(() => import('@/pages/admin/ActivityLogPage'))
+const NotificationLogPage = lazyWithRetry(() => import('@/pages/admin/NotificationLogPage'))
+const AnnouncementsPage = lazyWithRetry(() => import('@/pages/admin/AnnouncementsPage'))
+const ModerationPage = lazyWithRetry(() => import('@/pages/admin/ModerationPage'))
 
 function PageLoader() {
   return (

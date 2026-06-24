@@ -1,43 +1,41 @@
 import { Router, type Request, type Response } from 'express';
-import type { WebhookEvent } from './cometchat.types.js';
-import { validateSignature, processEvent } from './cometchat-webhook.service.js';
+import { processWebhookPayload } from './cometchat-webhook.service.js';
 
 export const cometchatWebhookRouter = Router();
 
 /**
  * POST /webhooks/cometchat
  *
- * Receives CometChat webhook events.
- * Authentication is via webhook signature (x-cometchat-signature header),
- * NOT via JWT. The raw body is validated against the signature.
+ * Receives CometChat webhook events (latest format — NOT legacy).
+ *
+ * CometChat's latest webhooks use Basic Authentication for security
+ * (configured in the dashboard). The payload format is:
+ * {
+ *   "trigger": "message_sent" | "moderation_engine_blocked" | "call_ended" | ...,
+ *   "data": { ... event-specific payload ... },
+ *   "appId": "<appId>",
+ *   "region": "<region>",
+ *   "webhook": "<webhookID>"
+ * }
+ *
+ * No HMAC signature header — security is via Basic Auth on the URL (dashboard config).
  */
 cometchatWebhookRouter.post(
   '/',
   async (req: Request, res: Response) => {
     try {
-      const signature = req.headers['x-cometchat-signature'] as string | undefined;
+      const body = req.body;
 
-      if (!signature) {
-        res.status(401).json({ error: 'Missing webhook signature' });
+      if (!body || !body.trigger) {
+        console.warn('[Webhook] Received payload with no trigger field:', JSON.stringify(body).slice(0, 200));
+        res.status(400).json({ error: 'Invalid webhook payload: missing trigger' });
         return;
       }
 
-      // Get the raw body for signature validation.
-      // The body has already been parsed by express.json(), so we reconstruct
-      // the raw string for HMAC verification.
-      const rawBody = JSON.stringify(req.body);
+      console.log(`[Webhook] Received trigger: ${body.trigger}`);
 
-      if (!validateSignature(rawBody, signature)) {
-        res.status(401).json({ error: 'Invalid webhook signature' });
-        return;
-      }
-
-      const event = req.body as WebhookEvent;
-
-      // Process the event asynchronously — respond immediately with 200
-      // to avoid CometChat retrying due to timeout.
-      // Errors are logged internally by processEvent.
-      void processEvent(event).catch((err) => {
+      // Process asynchronously — respond with 200 immediately per CometChat best practices.
+      void processWebhookPayload(body).catch((err) => {
         console.error('[Webhook Route] Background processing error:', err);
       });
 

@@ -183,6 +183,25 @@ export function CometChatProvider({ children }: CometChatProviderProps) {
         // 3. Init Calls SDK v5 (with retry + exponential backoff)
         await initCallsWithRetry();
 
+        // 3.1 Login to Calls SDK — required for group call "Join" to work.
+        // CometChatCalls.generateToken (called by the UI Kit when user taps
+        // "Join" on a meeting card) requires an authenticated Calls SDK session.
+        // Without this, it throws CometChatException with no details.
+        try {
+          const { CometChat } = await import("@cometchat/chat-sdk-javascript");
+          const loggedInUser = await CometChat.getLoggedinUser();
+          if (loggedInUser) {
+            const userAuthToken = loggedInUser.getAuthToken();
+            if (userAuthToken) {
+              await CometChatCalls.loginWithAuthToken(userAuthToken);
+            }
+          }
+        } catch (callsLoginErr) {
+          // Non-fatal: 1:1 ringing still works via the Chat SDK's signaling,
+          // but group call "Join" buttons won't function without this.
+          console.warn("[CometChat] Calls SDK login failed (group calls may not work):", callsLoginErr);
+        }
+
         // 4. Register FCM token with CometChat for web push notifications.
         // Runs in the background — does not block readiness.
         registerCometChatPushToken();

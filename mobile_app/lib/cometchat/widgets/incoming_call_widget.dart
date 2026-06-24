@@ -392,9 +392,25 @@ class _AcceptedCallScreenState extends State<_AcceptedCallScreen> {
   }
 
   Future<void> _endCall() async {
-    // Leave the WebRTC session — CometChatOngoingCallService does not exist
-    // in cometchat_calls_sdk 5.x; leaveSession() is the correct cleanup.
+    // Leave the WebRTC session
     await CallSession.getInstance()?.leaveSession();
+
+    // End the call in CometChat's signaling system so it's no longer "ongoing"
+    try {
+      CometChat.endCall(
+        widget.sessionId,
+        onSuccess: (Call call) {
+          debugPrint('[AcceptedCall] ✓ CometChat.endCall succeeded');
+        },
+        onError: (CometChatException e) {
+          // Non-fatal: the call may already be ended by the other party
+          debugPrint('[AcceptedCall] endCall error (non-fatal): ${e.message}');
+        },
+      );
+    } catch (e) {
+      debugPrint('[AcceptedCall] endCall exception (non-fatal): $e');
+    }
+
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }

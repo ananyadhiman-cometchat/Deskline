@@ -4,8 +4,10 @@ import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/theme/color_scheme.dart';
+import '../cometchat_config.dart';
 
 /// Public function to join a meeting call from anywhere in the app
 /// (e.g., tapping "Join" on a meeting message card).
@@ -16,7 +18,6 @@ void joinMeetingCall(BuildContext context, {required String sessionId, required 
       builder: (_) => _OngoingCallScreen(
         sessionId: sessionId,
         isVideo: isVideo,
-        recipientUid: sessionId, // group GUID for meeting calls
       ),
     ),
   );
@@ -56,31 +57,18 @@ class _CallButtonsWidgetState extends State<CallButtonsWidget> {
       final isGroup = widget.groupId != null && widget.groupId!.isNotEmpty;
       debugPrint('[CallButtons] Initiating $callType call. isGroup=$isGroup, target=${isGroup ? widget.groupId : widget.recipientUid}');
 
-      final call = Call(
-        receiverUid: isGroup ? widget.groupId! : widget.recipientUid,
-        receiverType: isGroup
-            ? CometChatReceiverType.group
-            : CometChatReceiverType.user,
-        type: callType,
-      );
-
-      CometChat.initiateCall(
-        call,
-        onSuccess: (Call initiatedCall) {
-          debugPrint('[CallButtons] Call initiated successfully. sessionId=${initiatedCall.sessionId}');
-          if (!mounted) return;
-          setState(() => _isInitiatingCall = false);
-          _showOutgoingCallScreen(initiatedCall);
-        },
-        onError: (CometChatException e) {
-          debugPrint('[CallButtons] ERROR initiateCall: code=${e.code}, message=${e.message}, details=${e.details}');
-          if (!mounted) return;
-          setState(() => _isInitiatingCall = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Call failed: ${e.message ?? e.code ?? "Unknown error"}')),
-          );
-        },
-      );
+      if (isGroup) {
+        // ─── Group calls use "meeting" custom messages (NOT initiateCall) ───
+        // This matches the web's CometChatMessageHeader behavior:
+        // 1. Generate a unique session ID
+        // 2. Send a custom message with type "meeting" to the group
+        // 3. Navigate to the call screen immediately (the sender joins)
+        // 4. Other group members see the meeting card and tap "Join"
+        await _startGroupMeetingCall(callType);
+      } else {
+        // ─── 1:1 calls use the ringing channel (initiateCall) ───
+        _startRingingCall(callType);
+      }
     } catch (e, stack) {
       debugPrint('[CallButtons] EXCEPTION in _initiateCall: $e');
       debugPrint('[CallButtons] Stack: $stack');
@@ -93,13 +81,101 @@ class _CallButtonsWidgetState extends State<CallButtonsWidget> {
     }
   }
 
+  /// Start a group meeting call by sending a custom "meeting" message.
+  /// Matches the web's CometChatCallButtons group behavior.
+  Future<void> _startGroupMeetingCall(String callType) async {
+    final sessionId = const Uuid().v4();
+
+    // Send a custom message of type "meeting" to the group.
+    // This creates the meeting card that other members can tap to join.
+    //
+    // IMPORTANT: customData must match the web UI Kit's exact format so that
+    // the web's CometChatMessageList can render a working "Join" button.
+    // The CometChat SDK's CustomMessage.getSessionId() reads the "sessionID"
+    // (capital ID) key — without it, the web kit calls generateToken(undefined)
+    // and throws an empty CometChatException. We include BOTH "sessionID" and
+    // "sessionId" (plus lowercase "sessionid") to be fully compatible with the
+    // kit and the SDK's call-session parsing.
+    final callTypeStr = callType == CometChatCallType.video ? 'video' : 'audio';
+    final customMessage = CustomMessage(
+      receiverUid: widget.groupId!,
+      type: MessageTypeConstants.meeting,
+      receiverType: CometChatReceiverType.group,
+      customData: {
+        'sessionID': sessionId, // ← capital ID: what the web kit + SDK read
+        'sessionId': sessionId, // ← camelCase: what the Flutter template reads
+        'sessionid': sessionId, // ← lowercase: SDK CALL_SESSION_ID key
+        'callType': callTypeStr,
+      },
+    );
+
+    // Match the web kit: mark as custom category + increment unread count.
+    customMessage.category = MessageCategoryConstants.custom;
+    customMessage.metadata = {'incrementUnreadCount': true};
+
+    final completer = Completer<void>();
+
+    CometChat.sendCustomMessage(
+      customMessage,
+      onSuccess: (BaseMessage message) {
+        debugPrint('[CallButtons] Meeting message sent. sessionId=$sessionId');
+        if (!completer.isCompleted) completer.complete();
+      },
+      onError: (CometChatException e) {
+        debugPrint('[CallButtons] ERROR sendCustomMessage: code=${e.code}, message=${e.message}');
+        if (!completer.isCompleted) completer.completeError(e);
+      },
+    );
+
+    await completer.future;
+
+    if (!mounted) return;
+    setState(() => _isInitiatingCall = false);
+
+    // Navigate to the call screen — the initiator joins immediately
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => _OngoingCallScreen(
+          sessionId: sessionId,
+          isVideo: callType == CometChatCallType.video,
+        ),
+      ),
+    );
+  }
+
+  /// Start a 1:1 ringing call via CometChat.initiateCall.
+  void _startRingingCall(String callType) {
+    final call = Call(
+      receiverUid: widget.recipientUid,
+      receiverType: CometChatReceiverType.user,
+      type: callType,
+    );
+
+    CometChat.initiateCall(
+      call,
+      onSuccess: (Call initiatedCall) {
+        debugPrint('[CallButtons] 1:1 call initiated. sessionId=${initiatedCall.sessionId}');
+        if (!mounted) return;
+        setState(() => _isInitiatingCall = false);
+        _showOutgoingCallScreen(initiatedCall);
+      },
+      onError: (CometChatException e) {
+        debugPrint('[CallButtons] ERROR initiateCall: code=${e.code}, message=${e.message}, details=${e.details}');
+        if (!mounted) return;
+        setState(() => _isInitiatingCall = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Call failed: ${e.message ?? e.code ?? "Unknown error"}')),
+        );
+      },
+    );
+  }
+
   void _showOutgoingCallScreen(Call call) {
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (_) => _OngoingCallScreen(
           sessionId: call.sessionId!,
           isVideo: call.type == CometChatCallType.video,
-          recipientUid: widget.recipientUid,
         ),
       ),
     );
@@ -166,15 +242,17 @@ class _CallButton extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// _OngoingCallScreen — Displays the active call session
+// ═══════════════════════════════════════════════════════════════
+
 class _OngoingCallScreen extends StatefulWidget {
   final String sessionId;
   final bool isVideo;
-  final String recipientUid;
 
   const _OngoingCallScreen({
     required this.sessionId,
     required this.isVideo,
-    required this.recipientUid,
   });
 
   @override
@@ -218,15 +296,12 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     }
 
     // Ensure the Calls SDK is initialized before joining.
-    // The Chat SDK is already init'd (CometChat.initiateCall succeeded),
-    // but the Calls SDK has its own lifecycle.
     await _ensureCallsSdkReady();
 
     _joinSession();
   }
 
   /// Login the v5 Calls SDK if not already logged in.
-  /// Init is done in main.dart at app startup.
   Future<void> _ensureCallsSdkReady() async {
     try {
       final loggedInUser = CometChatCalls.getLoggedInUser();
@@ -237,7 +312,6 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     } catch (_) {}
 
     try {
-      // Login with the auth token from the Chat SDK
       final authToken = await CometChat.getUserAuthToken();
       if (authToken != null && authToken.isNotEmpty) {
         final loginCompleter = Completer<void>();
@@ -264,7 +338,8 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
   void _joinSession() {
     final settings = (SessionSettingsBuilder()
           ..startAudioMuted(false)
-          ..startVideoPaused(!widget.isVideo))
+          ..startVideoPaused(!widget.isVideo)
+          ..setType(widget.isVideo ? SessionType.video : SessionType.audio))
         .build();
 
     CometChatCalls.joinSession(
@@ -277,12 +352,11 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
           _callWidget = callWidget;
           _isJoining = false;
         });
-        // Register session listeners (like the official sample)
         _callSession = CallSession.getInstance();
         _callSession?.addSessionStatusListener(this);
         _callSession?.addButtonClickListener(this);
 
-        // Fallback: poll for call ending (SDK sometimes doesn't fire listeners)
+        // Fallback poller in case SDK listeners don't fire
         _startEndCallPoller();
       },
       onError: (CometChatCallsException e) {
@@ -296,8 +370,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     );
   }
 
-  /// Polls every 2 seconds to check if the call session ended.
-  /// This is a safety net in case the SDK's listeners don't fire.
+  /// Polls every 2 seconds to detect session end as a safety net.
   void _startEndCallPoller() {
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 2));
@@ -305,25 +378,65 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
       final session = CallSession.getInstance();
       if (session == null && _callWidget != null) {
         debugPrint('[OngoingCall] Poller detected session ended');
-        _reinitializeAndPop();
+        _endCallAndPop();
         return false;
       }
       return mounted;
     });
   }
 
-  /// Re-initialize the Calls SDK after a session ends and pop back.
+  /// End the call properly and navigate back.
+  ///
+  /// This does THREE things:
+  /// 1. Leaves the WebRTC session (local user disconnects from media)
+  /// 2. Tells CometChat's signaling layer the call is ended (so it's no longer
+  ///    "ongoing" and other users can start new calls)
+  /// 3. Re-initializes the Calls SDK for future calls
   bool _hasPopped = false;
 
-  Future<void> _reinitializeAndPop() async {
+  Future<void> _endCallAndPop() async {
     if (_hasPopped) return;
     _hasPopped = true;
 
-    // Re-init the Calls SDK so subsequent calls work
+    // 1. Leave the WebRTC session
+    try {
+      await _callSession?.leaveSession();
+    } catch (e) {
+      debugPrint('[OngoingCall] leaveSession error (non-fatal): $e');
+    }
+
+    // 2. End the call in CometChat's signaling system.
+    //    This marks the call as "ended" so it no longer blocks new calls.
+    //    Uses CometChat.endCall which is the correct API for both 1:1 and group sessions.
+    try {
+      final endCompleter = Completer<void>();
+      CometChat.endCall(
+        widget.sessionId,
+        onSuccess: (Call endedCall) {
+          debugPrint('[OngoingCall] ✓ CometChat.endCall succeeded for session=${widget.sessionId}');
+          if (!endCompleter.isCompleted) endCompleter.complete();
+        },
+        onError: (CometChatException e) {
+          // Non-fatal: the session may already be ended by the other party
+          debugPrint('[OngoingCall] endCall error (non-fatal): code=${e.code}, msg=${e.message}');
+          if (!endCompleter.isCompleted) endCompleter.complete();
+        },
+      );
+      await endCompleter.future;
+    } catch (e) {
+      debugPrint('[OngoingCall] endCall exception (non-fatal): $e');
+    }
+
+    // 3. Pop back to ticket detail immediately
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    // 4. Re-init the Calls SDK in background so subsequent calls work
     try {
       final callAppSettings = (CallAppSettingBuilder()
-            ..appId = '16802226f2533cd8a'
-            ..region = 'in')
+            ..appId = CometChatConfig.appId
+            ..region = CometChatConfig.region)
           .build();
       final completer = Completer<void>();
       CometChatCalls.init(callAppSettings,
@@ -331,13 +444,6 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
           onError: (_) { if (!completer.isCompleted) completer.complete(); });
       await completer.future;
     } catch (_) {}
-
-    if (mounted) {
-      // Defer pop to next frame to avoid navigator lock conflicts
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context, rootNavigator: true).pop();
-      });
-    }
   }
 
   // ─── SessionStatusListeners ───────────────────────────────────────
@@ -350,13 +456,13 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
   @override
   void onSessionLeft() {
     debugPrint('[OngoingCall] Session left');
-    _reinitializeAndPop();
+    _endCallAndPop();
   }
 
   @override
   void onConnectionClosed() {
     debugPrint('[OngoingCall] Connection closed');
-    _reinitializeAndPop();
+    _endCallAndPop();
   }
 
   @override
@@ -372,7 +478,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
   @override
   void onSessionTimedOut() {
     debugPrint('[OngoingCall] Session timed out');
-    _reinitializeAndPop();
+    _endCallAndPop();
   }
 
   // ─── ButtonClickListeners ─────────────────────────────────────────
@@ -380,7 +486,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
   @override
   void onLeaveSessionButtonClicked() {
     debugPrint('[OngoingCall] Leave button clicked');
-    _reinitializeAndPop();
+    _endCallAndPop();
   }
 
   @override
@@ -441,8 +547,6 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
                 ),
               )
             else if (_callWidget != null)
-              // The SDK's call widget includes its own controls (mute, camera, end call)
-              // — do NOT add custom controls on top of it.
               SizedBox.expand(child: _callWidget),
           ],
         ),
