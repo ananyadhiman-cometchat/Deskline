@@ -93,7 +93,7 @@ export function CallPermissionGate() {
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60">
       <div
         className="border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl max-w-sm w-full mx-4"
         role="dialog"

@@ -7,6 +7,21 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/theme/color_scheme.dart';
 
+/// Public function to join a meeting call from anywhere in the app
+/// (e.g., tapping "Join" on a meeting message card).
+/// Handles permissions, Calls SDK init, and navigates to the call screen.
+void joinMeetingCall(BuildContext context, {required String sessionId, required bool isVideo}) {
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(
+      builder: (_) => _OngoingCallScreen(
+        sessionId: sessionId,
+        isVideo: isVideo,
+        recipientUid: sessionId, // group GUID for meeting calls
+      ),
+    ),
+  );
+}
+
 class CallButtonsWidget extends StatefulWidget {
   /// The CometChat UID of the call recipient (used for 1:1 calls).
   final String recipientUid;
@@ -210,43 +225,18 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     _joinSession();
   }
 
-  /// Initialize + login the Calls SDK if not already done.
+  /// Login the v5 Calls SDK if not already logged in.
+  /// Init is done in main.dart at app startup.
   Future<void> _ensureCallsSdkReady() async {
     try {
-      // Check if already logged in
       final loggedInUser = CometChatCalls.getLoggedInUser();
       if (loggedInUser != null) {
         debugPrint('[OngoingCall] Calls SDK already logged in');
         return;
       }
-    } catch (_) {
-      // getLoggedInUser may throw if not initialized
-    }
+    } catch (_) {}
 
     try {
-      // Init the Calls SDK
-      const appId = '16802226f2533cd8a';
-      const region = 'in';
-
-      final callAppSettings = (CallAppSettingBuilder()
-            ..appId = appId
-            ..region = region)
-          .build();
-
-      final initCompleter = Completer<void>();
-      CometChatCalls.init(
-        callAppSettings,
-        onSuccess: (_) {
-          if (!initCompleter.isCompleted) initCompleter.complete();
-        },
-        onError: (CometChatCallsException e) {
-          debugPrint('[OngoingCall] Calls SDK init error: ${e.message}');
-          if (!initCompleter.isCompleted) initCompleter.completeError(e);
-        },
-      );
-      await initCompleter.future;
-      debugPrint('[OngoingCall] ✓ Calls SDK initialized');
-
       // Login with the auth token from the Chat SDK
       final authToken = await CometChat.getUserAuthToken();
       if (authToken != null && authToken.isNotEmpty) {
@@ -254,6 +244,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
         CometChatCalls.loginWithAuthToken(
           authToken: authToken,
           onSuccess: (_) {
+            debugPrint('[OngoingCall] ✓ Calls SDK logged in');
             if (!loginCompleter.isCompleted) loginCompleter.complete();
           },
           onError: (CometChatCallsException e) {
@@ -262,11 +253,11 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
           },
         );
         await loginCompleter.future;
-        debugPrint('[OngoingCall] ✓ Calls SDK logged in');
+      } else {
+        debugPrint('[OngoingCall] No auth token available for Calls login');
       }
     } catch (e) {
-      debugPrint('[OngoingCall] Calls SDK setup failed: $e');
-      // Continue anyway — joinSession might still work if the SDK was partially initialized
+      debugPrint('[OngoingCall] Calls SDK login failed: $e');
     }
   }
 
@@ -290,6 +281,9 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
         _callSession = CallSession.getInstance();
         _callSession?.addSessionStatusListener(this);
         _callSession?.addButtonClickListener(this);
+
+        // Fallback: poll for call ending (SDK sometimes doesn't fire listeners)
+        _startEndCallPoller();
       },
       onError: (CometChatCallsException e) {
         debugPrint('[OngoingCall] ERROR joinSession: ${e.message}');
@@ -302,15 +296,34 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     );
   }
 
-  /// Re-initialize the Calls SDK after a session ends (required per official sample —
-  /// the SDK's internal state gets cleared after a session).
+  /// Polls every 2 seconds to check if the call session ended.
+  /// This is a safety net in case the SDK's listeners don't fire.
+  void _startEndCallPoller() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return false;
+      final session = CallSession.getInstance();
+      if (session == null && _callWidget != null) {
+        debugPrint('[OngoingCall] Poller detected session ended');
+        _reinitializeAndPop();
+        return false;
+      }
+      return mounted;
+    });
+  }
+
+  /// Re-initialize the Calls SDK after a session ends and pop back.
+  bool _hasPopped = false;
+
   Future<void> _reinitializeAndPop() async {
+    if (_hasPopped) return;
+    _hasPopped = true;
+
+    // Re-init the Calls SDK so subsequent calls work
     try {
-      const appId = '16802226f2533cd8a';
-      const region = 'in';
       final callAppSettings = (CallAppSettingBuilder()
-            ..appId = appId
-            ..region = region)
+            ..appId = '16802226f2533cd8a'
+            ..region = 'in')
           .build();
       final completer = Completer<void>();
       CometChatCalls.init(callAppSettings,
@@ -319,7 +332,12 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
       await completer.future;
     } catch (_) {}
 
-    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    if (mounted) {
+      // Defer pop to next frame to avoid navigator lock conflicts
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      });
+    }
   }
 
   // ─── SessionStatusListeners ───────────────────────────────────────

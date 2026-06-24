@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/theme_provider.dart';
 import '../../shared/enums/ticket_status.dart';
+import 'call_buttons_widget.dart' show joinMeetingCall;
 
 /// Conversation type for the CometChat chat panel.
 enum ConversationType {
@@ -199,39 +200,78 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
 
     if (user == null && group == null) return const NoChatPlaceholder();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return _withCometChatPalette(
       context,
       child: Container(
-        height: 460,
+        // Expand to fill available space (no fixed height)
+        constraints: const BoxConstraints(minHeight: 500),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          // Use darker background in dark mode for better contrast
+          color: isDark ? const Color(0xFF0F0F11) : Theme.of(context).colorScheme.surface,
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           ),
         ),
         child: Column(
           children: [
-            // Header row: CometChat header + expand button
-            Stack(
-              children: [
-                CometChatMessageHeader(user: user, group: group),
-                Positioned(
-                  right: 8,
-                  top: 0,
-                  bottom: 0,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      tooltip: 'Expand to fullscreen',
-                      icon: const Icon(Icons.open_in_full, size: 18),
-                      onPressed: () => _openFullscreen(context, user, group),
-                    ),
+            // Minimal header: ticket name + fullscreen button (no CometChatMessageHeader)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
-              ],
+              ),
+              child: Row(
+                children: [
+                  // Group/User name
+                  Expanded(
+                    child: Text(
+                      group?.name ?? user?.name ?? 'Chat',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Member count for groups
+                  if (group != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        '${group.membersCount} Members',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                  // Fullscreen button (right side)
+                  IconButton(
+                    tooltip: 'Expand to fullscreen',
+                    icon: const Icon(Icons.open_in_full, size: 18),
+                    onPressed: () => _openFullscreen(context, user, group),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                ],
+              ),
             ),
+            // Message list — fills all remaining space
             Expanded(
-              child: CometChatMessageList(user: user, group: group),
+              child: CometChatMessageList(
+                user: user,
+                group: group,
+                addTemplate: [_meetingMessageTemplate()],
+                messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+              ),
             ),
             if (!_hideComposer)
               CometChatMessageComposer(user: user, group: group)
@@ -281,14 +321,14 @@ Widget _withCometChatPalette(BuildContext context, {required Widget child}) {
   );
 }
 
-/// Dark colour palette for CometChat — zinc/near-black surfaces.
+/// Dark colour palette for CometChat — true black/zinc surfaces matching the app.
 final _darkPalette = CometChatColorPalette(
   primary: const Color(0xFFFF4655),
-  // Backgrounds: background1 = card, background2 = input, background3 = hover, background4 = divider
-  background1: const Color(0xFF09090B),
-  background2: const Color(0xFF18181B),
-  background3: const Color(0xFF27272A),
-  background4: const Color(0xFF3F3F46),
+  // Backgrounds: darker to match DeskLine's app background
+  background1: const Color(0xFF0F0F11),
+  background2: const Color(0xFF141416),
+  background3: const Color(0xFF1C1C1E),
+  background4: const Color(0xFF2C2C2E),
   // Neutrals (text, icons)
   neutral100: const Color(0xFFF8FAFC),
   neutral200: const Color(0xFFE4E4E7),
@@ -360,6 +400,140 @@ final _lightPalette = CometChatColorPalette(
   buttonText: const Color(0xFFFFFFFF),
 );
 
+/// Builds a MessagesRequestBuilder that includes custom/meeting messages
+/// in addition to the standard message types. Without this, the default
+/// builder only fetches text/image/audio/video/file/action/interactive
+/// categories — skipping "custom" entirely, so meeting call cards never appear.
+MessagesRequestBuilder _buildMessagesRequestBuilder(User? user, Group? group) {
+  final builder = MessagesRequestBuilder()
+    ..categories = [
+      CometChatMessageCategory.message,
+      CometChatMessageCategory.action,
+      CometChatMessageCategory.interactive,
+      MessageCategoryConstants.custom, // ← THIS IS THE KEY FIX
+    ]
+    ..types = [
+      CometChatMessageType.text,
+      CometChatMessageType.image,
+      CometChatMessageType.audio,
+      CometChatMessageType.video,
+      CometChatMessageType.file,
+      MessageTypeConstants.groupActions,
+      MessageTypeConstants.form,
+      MessageTypeConstants.card,
+      MessageTypeConstants.meeting, // ← meeting custom messages
+    ]
+    ..hideReplies = true;
+
+  if (user != null) {
+    builder.uid = user.uid;
+  } else if (group != null) {
+    builder.guid = group.guid;
+  }
+
+  return builder;
+}
+
+/// Creates a CometChatMessageTemplate for "meeting" custom messages.
+/// This renders the "Voice/Video call — Join" card in the message list,
+/// matching the web's behavior. Tapping "Join" navigates to the ongoing
+/// call screen (with Calls SDK init + permissions handled automatically).
+CometChatMessageTemplate _meetingMessageTemplate() {
+  return CometChatMessageTemplate(
+    type: MessageTypeConstants.meeting,
+    category: MessageCategoryConstants.custom,
+    contentView: (BaseMessage message, BuildContext context,
+        BubbleAlignment alignment,
+        {AdditionalConfigurations? additionalConfigurations}) {
+      final customData = (message as CustomMessage).customData ?? {};
+      final callType = customData['callType'] ?? 'audio';
+      final sessionId = (customData['sessionId'] ?? '') as String;
+      final sentAt = message.sentAt;
+      final dateStr = sentAt != null
+          ? '${sentAt.day} ${_monthName(sentAt.month)}, ${sentAt.hour.toString().padLeft(2, '0')}:${sentAt.minute.toString().padLeft(2, '0')} ${sentAt.hour >= 12 ? 'PM' : 'AM'}'
+          : '';
+
+      return GestureDetector(
+        onTap: () {
+          if (sessionId.isEmpty) return;
+          // Navigate to the call screen
+          joinMeetingCall(context, sessionId: sessionId, isVideo: callType == 'video');
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF4655),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      callType == 'video' ? Icons.videocam : Icons.phone,
+                      color: const Color(0xFFFF4655),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        callType == 'video' ? 'Video call' : 'Voice call',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (dateStr.isNotEmpty)
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Divider(color: Colors.white30, height: 1),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Join',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+String _monthName(int month) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[month - 1];
+}
+
 /// Full-screen chat page pushed by the expand button in [ChatPanelWidget].
 class _FullscreenChatPage extends ConsumerWidget {
   final User? user;
@@ -400,7 +574,12 @@ class _FullscreenChatPage extends ConsumerWidget {
           children: [
             CometChatMessageHeader(user: user, group: group),
             Expanded(
-              child: CometChatMessageList(user: user, group: group),
+              child: CometChatMessageList(
+                user: user,
+                group: group,
+                addTemplate: [_meetingMessageTemplate()],
+                messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+              ),
             ),
             if (!hideComposer)
               CometChatMessageComposer(user: user, group: group)
