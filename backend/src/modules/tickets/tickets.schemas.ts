@@ -19,5 +19,6 @@ export const ticketListQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20),
   status: z.nativeEnum(TicketStatus).optional(),
   subType: z.nativeEnum(TicketSubType).optional(),
-  category: z.nativeEnum(TicketCategory).optional()
+  category: z.nativeEnum(TicketCategory).optional(),
+  agentId: z.string().uuid().optional()
 });

@@ -62,10 +62,10 @@ async function main() {
   const agents = allUsers.filter(u => u.role === 'agent' || u.role === 'supervisor');
   for (let i = 0; i < 60; i++) {
     const employee = employees[i % employees.length];
-    const assigned = i < 50 ? agents[i % agents.length] : null;
-    const ticket = await prisma.ticket.create({ data: { title: `Seed Ticket ${i + 1}`, description: `Generated ticket ${i + 1} for testing and demos.`, category: departments[i % 3], subType: subTypes[i % 4], priority: priorities[i % 3], status: statuses[i % 5], employeeId: employee.id, agentId: assigned?.id } });
+    const assigned = agents[i % agents.length];
+    const ticket = await prisma.ticket.create({ data: { title: `Seed Ticket ${i + 1}`, description: `Generated ticket ${i + 1} for testing and demos.`, category: departments[i % 3], subType: subTypes[i % 4], priority: priorities[i % 3], status: statuses[i % 5], employeeId: employee.id, agentId: assigned.id } });
     await prisma.activityLog.create({ data: { userId: employee.id, action: 'ticket_created', entityType: 'ticket', entityId: ticket.id, metadata: { seed: true } } });
-    await prisma.activityLog.create({ data: { userId: assigned?.id ?? employee.id, action: 'status_updated', entityType: 'ticket', entityId: ticket.id, metadata: { status: ticket.status } } });
+    await prisma.activityLog.create({ data: { userId: assigned.id, action: 'status_updated', entityType: 'ticket', entityId: ticket.id, metadata: { status: ticket.status } } });
     await prisma.activityLog.create({ data: { userId: employee.id, action: 'notification_sent', entityType: 'notification', entityId: ticket.id, metadata: { seed: true } } });
     await prisma.notification.create({ data: { userId: employee.id, type: i % 4 === 0 ? 'assignment' : 'ticket_update', title: `Ticket ${i + 1}`, body: 'Seed notification', isRead: i % 2 === 0 } });
   }

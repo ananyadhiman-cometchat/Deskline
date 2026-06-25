@@ -35,11 +35,16 @@ const corsOrigins = env.CORS_ORIGINS
 
 app.use(helmet());
 app.use(cors({
+  // TEMPORARY: allow all origins (reflects the request origin) so the
+  // Cloudflare tunnel and any client can reach the API during demo/testing.
+  // NOTE: a literal "*" cannot be used with credentials:true — browsers reject it.
+  // Reflecting the origin achieves "allow all" while keeping cookies/auth working.
+  // TODO: revert to the `corsOrigins` allowlist before production.
   origin: (origin, callback) => {
     // Allow same-origin / non-browser clients (mobile app, curl) which send no Origin header.
     if (!origin) return callback(null, true);
-    if (corsOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    // Reflect any origin back — effectively allow-all.
+    return callback(null, true);
   },
   credentials: true
 }));

@@ -3,6 +3,7 @@ import {
   CometChatMessageList,
   CometChatMessageComposer,
   CometChatMessageHeader,
+  CometChatUIKit,
 } from "@cometchat/chat-uikit-react";
 import { CometChat } from "@cometchat/chat-sdk-javascript";
 import { useCometChat } from "../CometChatProvider";
@@ -59,6 +60,12 @@ export function TicketChatSection({
 
   const hideMessageComposer =
     ticketStatus === "resolved" || ticketStatus === "closed";
+
+  // When the ticket is resolved or closed, calls must be fully disabled.
+  // CometChatMessageHeader renders audio/video call buttons via its
+  // internal auxiliaryButtonView. We override that view to render nothing
+  // (null), which removes the call buttons for all roles on this ticket.
+  const hideCallButtons = hideMessageComposer; // same condition: resolved | closed
 
   // Handle Escape key to exit fullscreen
   useEffect(() => {
@@ -261,10 +268,19 @@ export function TicketChatSection({
       </div>
 
       {/* Participants (left) + Chat (right) Layout */}
-      <div className="flex flex-1 min-h-0" style={{ height: isFullscreen ? "calc(100vh - 45px)" : "575px" }}>
+      <div className="flex flex-1 min-h-0 relative" style={{ height: isFullscreen ? "calc(100vh - 45px)" : "575px" }}>
+        {/* Mobile Backdrop */}
+        {showParticipants && (
+          <div 
+            className="md:hidden absolute inset-0 z-20 bg-black/50" 
+            onClick={() => setShowParticipants(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Participants Sidebar — LEFT side */}
         {showParticipants && (
-          <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-background)] overflow-y-auto flex-shrink-0">
+          <div className="absolute inset-y-0 left-0 z-30 w-64 md:relative md:w-52 md:z-auto border-r border-[var(--color-border)] bg-[var(--theme-bg)] shadow-2xl md:shadow-none overflow-y-auto flex-shrink-0 transition-transform">
             <div className="px-3 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
               <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-muted)]">
                 Participants ({participants.length})
@@ -358,12 +374,51 @@ export function TicketChatSection({
                 <Users size={14} />
               </button>
             )}
-            <CometChatMessageHeader group={resolvedGroup} />
+            {/*
+              CometChatMessageHeader automatically renders audio + video call
+              buttons via its auxiliaryButtonView. When the ticket is resolved
+              or closed we override that view to render nothing so no call can
+              be initiated on a terminated conversation from any role.
+            */}
+            <CometChatMessageHeader
+              group={resolvedGroup}
+              {...(hideCallButtons && {
+                auxiliaryButtonView: (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--color-muted)",
+                      padding: "0 12px",
+                      fontStyle: "italic",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Calls disabled
+                  </span>
+                ),
+              })}
+            />
           </div>
 
           {/* Messages — bounded height container for scroll to work */}
-          <div className="ticket-chat-message-list-wrapper">
-            <CometChatMessageList group={resolvedGroup} />
+          <div className={`ticket-chat-message-list-wrapper ${hideCallButtons ? 'calls-disabled' : ''}`}>
+            <CometChatMessageList 
+              group={resolvedGroup} 
+              templates={
+                hideCallButtons 
+                  ? CometChatUIKit.getDataSource().getAllMessageTemplates().map((t: any) => {
+                      if (t.type === 'meeting') {
+                        t.contentView = () => (
+                          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded p-3 text-center opacity-70">
+                            <span className="text-xs italic text-[var(--color-muted)]">Call ended</span>
+                          </div>
+                        );
+                      }
+                      return t;
+                    })
+                  : undefined
+              }
+            />
           </div>
 
           {/* Composer */}

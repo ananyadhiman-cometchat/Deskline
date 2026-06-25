@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'cometchat/services/cometchat_push_service.dart';
 import 'features/notifications/services/push_notification_service.dart';
 
 Future<void> main() async {
@@ -45,13 +46,31 @@ Future<void> main() async {
     debugPrint('✗ CometChat Calls SDK init exception: $e');
   }
 
-  // Then set up push notification listeners (requires Firebase)
+  // Then set up push notification listeners (requires Firebase).
+  // Wrapped with a timeout: if flutter_local_notifications or any SDK
+  // requests an OS permission dialog that never resolves, runApp() would
+  // be permanently blocked and the user would see a white screen.
   try {
-    await PushNotificationService.initialize();
+    await PushNotificationService.initialize()
+        .timeout(const Duration(seconds: 5));
     debugPrint('✓ Push notifications initialized');
+  } on TimeoutException {
+    debugPrint('⚠ Push notification init timed out — proceeding without foreground notifications');
   } catch (e, stack) {
     debugPrint('✗ Push notification init failed: $e');
     debugPrint(stack.toString());
+  }
+
+  // Create the dedicated CometChat notification channel so chat/call
+  // notifications display correctly on Android 8+ (separate from DeskLine's).
+  try {
+    await CometChatPushService.initializeChannel()
+        .timeout(const Duration(seconds: 5));
+    debugPrint('✓ CometChat notification channel initialized');
+  } on TimeoutException {
+    debugPrint('⚠ CometChat notification channel init timed out');
+  } catch (e) {
+    debugPrint('✗ CometChat notification channel init failed: $e');
   }
 
   runApp(

@@ -59,7 +59,9 @@ class CometChatNotifier extends StateNotifier<CometChatState> {
     if (result.isInitialized) {
       state = const CometChatState(isInitialized: true);
       debugPrint('[CometChatProvider] ✓ Initialized successfully');
-      CometChatPushService.registerToken();
+      // Register the FCM token with CometChat so this device receives
+      // chat/call push notifications when the user is offline.
+      await CometChatPushService.registerToken();
     } else {
       debugPrint('[CometChatProvider] ✗ Init failed: ${result.error}');
       state = CometChatState(error: result.error);

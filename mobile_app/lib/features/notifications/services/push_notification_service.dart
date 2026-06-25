@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../../core/networking/dio_client.dart';
+import '../../../cometchat/services/cometchat_push_service.dart';
 import 'local_notification_service.dart';
 import 'notification_api_service.dart';
 
@@ -100,8 +101,29 @@ class PushNotificationService {
 
   /// Handle messages received while app is in the foreground.
   /// Displays a local notification in the system tray.
+  ///
+  /// Routes CometChat push payloads (chat messages, calls) to the dedicated
+  /// CometChat notification channel, and DeskLine app notifications to the
+  /// default channel — so the two coexist without conflict.
   static void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('FCM foreground message: ${message.messageId}');
+
+    // Route CometChat-originated push notifications to their own channel.
+    if (CometChatPushService.isCometChatNotification(message)) {
+      final ccNotification = message.notification;
+      final ccTitle = ccNotification?.title ??
+          message.data['title'] as String? ??
+          'New message';
+      final ccBody = ccNotification?.body ??
+          message.data['body'] as String? ??
+          '';
+      CometChatPushService.showNotification(
+        title: ccTitle,
+        body: ccBody,
+        payload: message.data['conversationId'] as String?,
+      );
+      return;
+    }
 
     final notification = message.notification;
     if (notification == null) return;

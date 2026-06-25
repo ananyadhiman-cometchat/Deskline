@@ -324,8 +324,9 @@ class MockTicketRepository implements TicketRepository {
     TicketPriority? priority,
     String? assignedToMe,
     String? search,
+    String? agentId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     var filtered = List<Ticket>.from(_tickets);
 

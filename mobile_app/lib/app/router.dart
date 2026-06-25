@@ -21,6 +21,7 @@ import '../features/agent/presentation/agent_inbox_screen.dart';
 import '../features/supervisor/presentation/escalation_queue_screen.dart';
 import '../features/supervisor/presentation/agent_load_view_screen.dart';
 import '../features/supervisor/presentation/global_ticket_view_screen.dart';
+import '../features/supervisor/presentation/supervisor_my_tickets_screen.dart';
 import '../features/supervisor/presentation/ticket_reassignment_screen.dart';
 import '../features/admin/presentation/user_management_screen.dart';
 import '../features/admin/presentation/activity_logs_screen.dart';
@@ -39,6 +40,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     redirect: (context, state) {
+      // ── Wait for auth to finish loading from secure storage ──────
+      // Until isInitialized is true, user/null is not yet reliable.
+      // Returning null here tells GoRouter to stay put and not
+      // navigate — this prevents the white screen race condition
+      // that occurs when the OS permission dialog (notifications)
+      // resolves before _initialize() has finished reading storage.
+      if (!authState.isInitialized) return null;
+
       final isAuthenticated = authState.isAuthenticated;
       final isLoginRoute = state.matchedLocation == '/login';
       final isRegisterRoute = state.matchedLocation == '/register';
@@ -211,6 +220,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/supervisor/tickets',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: GlobalTicketViewScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/supervisor/my-tickets',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SupervisorMyTicketsScreen(),
             ),
           ),
           GoRoute(

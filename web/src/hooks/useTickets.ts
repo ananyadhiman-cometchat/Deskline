@@ -24,6 +24,7 @@ export function useTickets(filters: TicketFilters = {}) {
       if (filters.subType) params.set('subType', filters.subType)
       if (filters.category) params.set('category', filters.category)
       if (filters.priority) params.set('priority', filters.priority)
+      if (filters.agentId) params.set('agentId', filters.agentId)
       if (filters.page) params.set('page', String(filters.page))
       if (filters.pageSize) params.set('pageSize', String(filters.pageSize))
 

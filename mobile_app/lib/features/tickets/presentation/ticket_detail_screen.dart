@@ -30,6 +30,11 @@ class TicketDetailScreen extends ConsumerStatefulWidget {
 class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
   bool _isActioning = false;
 
+  // Tracks whether the resolution-confirmation dialog has already been shown
+  // for the current resolved ticket, so it only auto-pops once per visit.
+  bool _hasShownResolutionDialog = false;
+  String? _dialogShownForTicketId;
+
   @override
   Widget build(BuildContext context) {
     final colors = DesklineColors.of(context);
@@ -55,6 +60,31 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
     }
 
     final ticket = tickets[ticketIndex];
+
+    // ─── Auto-show resolution confirmation dialog ────────────────
+    // Mirrors web behaviour: when an employee's ticket moves to "resolved",
+    // a dialog pops up automatically asking them to confirm or reject.
+    // _hasShownResolutionDialog prevents the dialog re-showing on every
+    // Riverpod rebuild while the ticket remains in the resolved state.
+    final isOwnerEmployee =
+        userRole == UserRole.employee && currentUser?.id == ticket.employeeId;
+    if (isOwnerEmployee &&
+        ticket.status == TicketStatus.resolved &&
+        !_hasShownResolutionDialog) {
+      _hasShownResolutionDialog = true;
+      _dialogShownForTicketId = ticket.id;
+      // Schedule after the current frame so we're not calling showDialog
+      // inside a build() call, which Flutter disallows.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showResolutionDialog(ticket);
+      });
+    }
+    // Reset the flag if the ticket moves away from resolved (e.g. rejected → in_progress)
+    if (_dialogShownForTicketId == ticket.id &&
+        ticket.status != TicketStatus.resolved) {
+      _hasShownResolutionDialog = false;
+      _dialogShownForTicketId = null;
+    }
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -304,23 +334,23 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
 
     // Confirm/Reject resolution — employee only when resolved
     if (role == UserRole.employee && ticket.status == TicketStatus.resolved) {
+      // ── LAYOUT: Column instead of Row to avoid overflow on narrow iOS ──
+      // "CONFIRM RESOLUTION" uppercased at navigationLabel size exceeds the
+      // half-width available in a Row on ~375px screens.
       actions.add(
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: AppButton.primary(
-                label: 'Confirm Resolution',
-                onPressed:
-                    _isActioning ? null : () => _confirmResolution(ticket),
-              ),
+            AppButton.primary(
+              label: 'Confirm Resolution',
+              onPressed:
+                  _isActioning ? null : () => _showResolutionDialog(ticket),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: AppButton.secondary(
-                label: 'Reject',
-                onPressed:
-                    _isActioning ? null : () => _rejectResolution(ticket),
-              ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton.secondary(
+              label: 'Reject Resolution',
+              onPressed:
+                  _isActioning ? null : () => _confirmReject(ticket),
             ),
           ],
         ),
@@ -517,6 +547,89 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
     }
   }
 
+  /// Shows a full-screen-style dialog that mirrors the web's resolution modal.
+  /// Called automatically via postFrameCallback when the ticket enters the
+  /// "resolved" state for the owning employee, and also when they tap the
+  /// "Confirm Resolution" button in the actions list.
+  void _showResolutionDialog(Ticket ticket) {
+    final colors = DesklineColors.of(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false, // Employee must actively choose
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: colors.cardBackground,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+              contentPadding: const EdgeInsets.all(AppSpacing.md),
+              actionsPadding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'RESOLUTION CONFIRMATION',
+                    style: AppTypography.sectionLabel
+                        .copyWith(color: AppColors.primaryRed, letterSpacing: 1.5),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Divider(height: 1, color: colors.borderColor),
+                ],
+              ),
+              content: Text(
+                'Your ticket has been marked as resolved by the assigned agent.\n\n'
+                'Please review the ticket details and confirm whether your issue '
+                'has been successfully resolved.',
+                style: AppTypography.bodySmall
+                    .copyWith(color: colors.textPrimary, height: 1.7),
+              ),
+              actions: [
+                // ── Reject ───────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton.secondary(
+                    label: 'Reject & Reopen',
+                    onPressed: _isActioning
+                        ? null
+                        : () {
+                            Navigator.of(dialogCtx).pop();
+                            _rejectResolution(ticket);
+                          },
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                // ── Confirm ──────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton.primary(
+                    label: 'Confirm Resolved',
+                    onPressed: _isActioning
+                        ? null
+                        : () {
+                            Navigator.of(dialogCtx).pop();
+                            _confirmResolution(ticket);
+                          },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Called by the inline "Reject Resolution" button in the actions list.
+  /// Delegates to [_rejectResolution] directly (no dialog needed — tapping
+  /// the button is already an explicit user action).
+  void _confirmReject(Ticket ticket) => _rejectResolution(ticket);
+
   Future<void> _confirmResolution(Ticket ticket) async {
     setState(() => _isActioning = true);
     try {
@@ -539,6 +652,7 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
       if (mounted) setState(() => _isActioning = false);
     }
   }
+
 
   Future<void> _rejectResolution(Ticket ticket) async {
     setState(() => _isActioning = true);

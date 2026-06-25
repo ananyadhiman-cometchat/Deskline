@@ -21,11 +21,16 @@ class LocalNotificationService {
     // Android initialization — resource name only (no @drawable/ prefix)
     const androidSettings = AndroidInitializationSettings('ic_notification');
 
-    // iOS initialization
+    // iOS initialization — all permission flags must be false.
+    // firebase_messaging already called requestPermission() in
+    // PushNotificationService.initialize() just before this runs.
+    // If flutter_local_notifications also requests permissions in the
+    // same session, the OS queues the dialog but never resolves it,
+    // causing _plugin.initialize() to hang and blocking runApp().
     const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false, // Already requested via firebase_messaging
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     const initSettings = InitializationSettings(

@@ -42,12 +42,14 @@ class ApiTicketRepository implements TicketRepository {
     TicketPriority? priority,
     String? assignedToMe,
     String? search,
+    String? agentId,
   }) async {
     final response = await _apiService.getTickets(
       page: page,
       pageSize: pageSize,
       status: status != null ? _statusToString(status) : null,
       category: category != null ? _categoryToString(category) : null,
+      agentId: agentId,
     );
 
     // Backend returns { data: [...], meta: { total, page, pageSize } }

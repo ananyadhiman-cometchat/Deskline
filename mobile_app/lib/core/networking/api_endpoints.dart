@@ -8,8 +8,9 @@ class ApiEndpoints {
   /// Android emulator: use 10.0.2.2 to reach the host machine's localhost
   /// (the Docker backend exposed on port 4000).
   /// iOS simulator: use localhost / 127.0.0.1.
+  /// Physical device (same WiFi): use the host Mac's LAN IP, e.g. 192.168.1.62.
   /// Staging: https://deskline.cometchat-staging.com/api
-  static const String baseUrl = 'http://10.0.2.2:4000/api';
+  static const String baseUrl = 'http://192.168.1.62:4000/api';
 
   // Auth
   static const String login = '/auth/login';

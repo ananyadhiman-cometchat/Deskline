@@ -21,6 +21,7 @@ const AgentConversationsPage = lazyWithRetry(() => import('@/pages/agent/Convers
 const AllTicketsPage = lazyWithRetry(() => import('@/pages/supervisor/AllTicketsPage'))
 const AgentLoadPage = lazyWithRetry(() => import('@/pages/supervisor/AgentLoadPage'))
 const SupervisorDashboardPage = lazyWithRetry(() => import('@/pages/supervisor/SupervisorDashboardPage'))
+const MyTicketsPage = lazyWithRetry(() => import('@/pages/supervisor/MyTicketsPage'))
 const AdminDashboardPage = lazyWithRetry(() => import('@/pages/admin/AdminDashboardPage'))
 const UserManagementPage = lazyWithRetry(() => import('@/pages/admin/UserManagementPage'))
 const ActivityLogPage = lazyWithRetry(() => import('@/pages/admin/ActivityLogPage'))
@@ -118,6 +119,14 @@ export const router = createBrowserRouter([
         element: (
           <AuthGuard allowedRoles={['supervisor']}>
             <S><SupervisorDashboardPage /></S>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: '/supervisor/my-tickets',
+        element: (
+          <AuthGuard allowedRoles={['supervisor']}>
+            <S><MyTicketsPage /></S>
           </AuthGuard>
         ),
       },

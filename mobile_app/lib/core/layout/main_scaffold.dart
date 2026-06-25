@@ -366,6 +366,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       case UserRole.supervisor:
         return const [
           _NavItem(label: 'Dashboard', shortLabel: 'Home', icon: Icons.dashboard_outlined, route: '/supervisor/dashboard'),
+          _NavItem(label: 'My Tickets', shortLabel: 'Mine', icon: Icons.person_outline, route: '/supervisor/my-tickets'),
           _NavItem(label: 'All Tickets', shortLabel: 'Tickets', icon: Icons.list_alt_outlined, route: '/supervisor/tickets'),
           _NavItem(label: 'Escalations', shortLabel: 'Escalate', icon: Icons.warning_amber_outlined, route: '/supervisor/escalations'),
           _NavItem(label: 'Agent Load', shortLabel: 'Agents', icon: Icons.people_outline, route: '/supervisor/agent-load'),

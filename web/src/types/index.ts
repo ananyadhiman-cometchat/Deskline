@@ -163,6 +163,7 @@ export interface TicketFilters {
   subType?: TicketSubType
   category?: TicketCategory
   priority?: TicketPriority
+  agentId?: string
   page?: number
   pageSize?: number
 }

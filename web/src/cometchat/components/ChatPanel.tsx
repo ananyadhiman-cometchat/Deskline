@@ -50,6 +50,18 @@ export function ChatPanel({
   const hideMessageComposer =
     ticketStatus === "resolved" || ticketStatus === "closed";
 
+  // Disable call buttons in the header when the ticket is resolved or closed.
+  // CometChatMessageHeader renders call icons in its auxiliaryButtonView —
+  // override it to render nothing so all roles see no call option.
+  const hideCallButtons = hideMessageComposer;
+
+  const callDisabledHeaderProps = hideCallButtons
+    ? {
+        hideVideoCallButton: true,
+        hideVoiceCallButton: true,
+      }
+    : {};
+
   // Build the CometChat User or Group object for the messages component
   const user = useMemo(() => {
     if (conversationType === "user" && recipientUid) {
@@ -106,7 +118,7 @@ export function ChatPanel({
     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
       {conversationType === "user" && user ? (
         <div className="flex h-full flex-col">
-          <CometChatMessageHeader user={user} />
+          <CometChatMessageHeader user={user} {...callDisabledHeaderProps} />
           <div className="flex-1 overflow-y-auto min-h-0">
             <CometChatMessageList user={user} />
           </div>
@@ -118,7 +130,7 @@ export function ChatPanel({
         </div>
       ) : conversationType === "group" && group ? (
         <div className="flex h-full flex-col">
-          <CometChatMessageHeader group={group} />
+          <CometChatMessageHeader group={group} {...callDisabledHeaderProps} />
           <div className="flex-1 overflow-y-auto min-h-0">
             <CometChatMessageList group={group} />
           </div>

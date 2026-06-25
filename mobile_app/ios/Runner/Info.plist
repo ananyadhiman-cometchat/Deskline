@@ -47,8 +47,29 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>DeskLine needs camera access to make video calls with agents and colleagues on your support tickets.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>DeskLine needs microphone access to make voice and video calls on your support tickets.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>DeskLine uses Bluetooth to connect to wireless headsets and speakers during calls.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>DeskLine uses Bluetooth to connect to wireless headsets and speakers during calls.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>DeskLine uses your local network to establish direct peer-to-peer connections for lower-latency calls.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>voip</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

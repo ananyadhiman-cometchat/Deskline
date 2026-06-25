@@ -77,6 +77,7 @@ type TicketListFilters = {
   status?: TicketStatus;
   subType?: TicketSubType;
   category?: TicketCategory;
+  agentId?: string;
 };
 
 type TicketUpdateInput = {
@@ -432,10 +433,11 @@ function buildTicketWhere(actor: TicketActor, filters: TicketListFilters): Prism
         : {};
 
   return {
-    ...accessFilter,
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.subType ? { subType: filters.subType } : {}),
-    ...(filters.category ? { category: filters.category } : {})
+    ...(filters.category ? { category: filters.category } : {}),
+    ...(filters.agentId ? { agentId: filters.agentId } : {}),
+    ...accessFilter
   };
 }
 
@@ -672,15 +674,17 @@ async function updateTicketStatus(actor: TicketActor, ticketId: string, status: 
     });
   }
 
-  if (status === TicketStatus.in_progress && ticket.status === TicketStatus.open && actor.role === UserRole.agent) {
-    await appendActivityLog(actor.id, 'ticket_claimed', 'ticket', ticket.id, {
-      agentId: actor.id,
-      category: ticket.category
-    });
+  if (status === TicketStatus.in_progress && ticket.status === TicketStatus.open) {
+    if (actor.role === UserRole.agent) {
+      await appendActivityLog(actor.id, 'ticket_claimed', 'ticket', ticket.id, {
+        agentId: actor.id,
+        category: ticket.category
+      });
+    }
 
-    // Create CometChat 1:1 conversation when agent claims a conversation ticket (non-blocking)
-    if (ticket.subType === TicketSubType.conversation) {
-      createTicketConversation(ticket.id, ticket.employeeId, actor.id).catch((err) => {
+    // Create CometChat 1:1 conversation when ticket moves to in_progress (non-blocking)
+    if (ticket.subType === TicketSubType.conversation && ticket.agentId) {
+      createTicketConversation(ticket.id, ticket.employeeId, ticket.agentId).catch((err) => {
         console.error('[Tickets] Non-blocking: Chat creation on claim failed:', (err as Error)?.message);
       });
     }
@@ -926,6 +930,10 @@ export async function interceptTicketConversation(actor: TicketActor, ticketId: 
 
   if (!ticket.cometchatConvoId) {
     throw new AppError('No active conversation on this ticket', 400, 'NO_CONVERSATION');
+  }
+
+  if (ticket.agentId === actor.id || ticket.employeeId === actor.id) {
+    throw new AppError('User is already part of this ticket conversation', 400, 'ALREADY_JOINED');
   }
 
   // Add the actor to the ticket's group conversation

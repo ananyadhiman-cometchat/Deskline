@@ -208,6 +208,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
         // Fixed height so Column children resolve correctly inside a ListView
         // (ListView provides unbounded height — Expanded cannot work there).
         height: 500,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           // Use darker background in dark mode for better contrast
           color: isDark ? const Color(0xFF0F0F11) : Theme.of(context).colorScheme.surface,
@@ -265,13 +266,26 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
                 ],
               ),
             ),
-            // Message list — fills remaining space within the bounded Container
+            // Message list — fills remaining space within the bounded Container.
+            // Wrapped in a LayoutBuilder + MediaQuery override so CometChat's
+            // bubbles size to the ACTUAL container width (not the full screen
+            // width), preventing the "RIGHT OVERFLOWED" horizontal overflow.
             Expanded(
-              child: CometChatMessageList(
-                user: user,
-                group: group,
-                addTemplate: [_meetingMessageTemplate()],
-                messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final mq = MediaQuery.of(context);
+                  return MediaQuery(
+                    data: mq.copyWith(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                    ),
+                    child: CometChatMessageList(
+                      user: user,
+                      group: group,
+                      addTemplate: [_meetingMessageTemplate(widget.ticketStatus)],
+                      messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
+                    ),
+                  );
+                },
               ),
             ),
             if (!_hideComposer)
@@ -437,9 +451,20 @@ MessagesRequestBuilder _buildMessagesRequestBuilder(User? user, Group? group) {
 
 /// Creates a CometChatMessageTemplate for "meeting" custom messages.
 /// This renders the "Voice/Video call — Join" card in the message list,
-/// matching the web's behavior. Tapping "Join" navigates to the ongoing
-/// call screen (with Calls SDK init + permissions handled automatically).
-CometChatMessageTemplate _meetingMessageTemplate() {
+/// matching the web's behavior.
+///
+/// [ticketStatus] controls whether tapping "Join" actually starts a call.
+/// When the ticket is [TicketStatus.resolved] or [TicketStatus.closed],
+/// the Join button shows an informational snackbar instead of navigating
+/// to the call screen. This prevents the crash that occurs when
+/// CometChatCalls.joinSession() is called for a session that belongs to
+/// a terminated conversation.
+CometChatMessageTemplate _meetingMessageTemplate(TicketStatus ticketStatus) {
+  // Guard: calls are disabled for resolved or closed tickets
+  final callsDisabled =
+      ticketStatus == TicketStatus.resolved ||
+      ticketStatus == TicketStatus.closed;
+
   return CometChatMessageTemplate(
     type: MessageTypeConstants.meeting,
     category: MessageCategoryConstants.custom,
@@ -460,6 +485,20 @@ CometChatMessageTemplate _meetingMessageTemplate() {
 
       return GestureDetector(
         onTap: () {
+          if (callsDisabled) {
+            // ── GUARD: calls disabled for resolved / closed tickets ──
+            // Show informational message instead of crashing the app by
+            // calling joinSession() on a terminated conversation session.
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Calls are disabled — this ticket has been resolved or closed.',
+                ),
+                duration: Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
           if (sessionId.isEmpty) return;
           // Navigate to the call screen
           joinMeetingCall(context, sessionId: sessionId, isVideo: callType == 'video');
@@ -467,7 +506,11 @@ CometChatMessageTemplate _meetingMessageTemplate() {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFF4655),
+            // Dim the card when calls are disabled so it visually signals
+            // the call is no longer active.
+            color: callsDisabled
+                ? const Color(0xFFFF4655).withValues(alpha: 0.4)
+                : const Color(0xFFFF4655),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -518,9 +561,10 @@ CometChatMessageTemplate _meetingMessageTemplate() {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Join',
+                  // Label changes when ticket is closed/resolved
+                  callsDisabled ? 'Call ended' : 'Join',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Colors.white.withValues(alpha: callsDisabled ? 0.5 : 0.9),
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -615,7 +659,7 @@ class _FullscreenChatPage extends ConsumerWidget {
                 child: CometChatMessageList(
                   user: user,
                   group: group,
-                  addTemplate: [_meetingMessageTemplate()],
+                  addTemplate: [_meetingMessageTemplate(ticketStatus)],
                   messagesRequestBuilder: _buildMessagesRequestBuilder(user, group),
                 ),
               ),

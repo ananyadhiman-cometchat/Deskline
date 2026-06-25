@@ -110,8 +110,12 @@ class _CallButtonsWidgetState extends State<CallButtonsWidget> {
     );
 
     // Match the web kit: mark as custom category + increment unread count.
+    // ADDITION: pushNotification triggers the background system push for offline users.
     customMessage.category = MessageCategoryConstants.custom;
-    customMessage.metadata = {'incrementUnreadCount': true};
+    customMessage.metadata = {
+      'incrementUnreadCount': true,
+      'pushNotification': 'meeting',
+    };
 
     final completer = Completer<void>();
 
@@ -406,8 +410,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     }
 
     // 2. End the call in CometChat's signaling system.
-    //    This marks the call as "ended" so it no longer blocks new calls.
-    //    Uses CometChat.endCall which is the correct API for both 1:1 and group sessions.
+    //    We try this for 1:1 calls; group meetings will gracefully fail since they lack a call entity.
     try {
       final endCompleter = Completer<void>();
       CometChat.endCall(
@@ -417,7 +420,7 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
           if (!endCompleter.isCompleted) endCompleter.complete();
         },
         onError: (CometChatException e) {
-          // Non-fatal: the session may already be ended by the other party
+          // Non-fatal: the session may already be ended by the other party or it's a group meeting
           debugPrint('[OngoingCall] endCall error (non-fatal): code=${e.code}, msg=${e.message}');
           if (!endCompleter.isCompleted) endCompleter.complete();
         },
@@ -431,19 +434,9 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }
-
-    // 4. Re-init the Calls SDK in background so subsequent calls work
-    try {
-      final callAppSettings = (CallAppSettingBuilder()
-            ..appId = CometChatConfig.appId
-            ..region = CometChatConfig.region)
-          .build();
-      final completer = Completer<void>();
-      CometChatCalls.init(callAppSettings,
-          onSuccess: (_) { if (!completer.isCompleted) completer.complete(); },
-          onError: (_) { if (!completer.isCompleted) completer.complete(); });
-      await completer.future;
-    } catch (_) {}
+    
+    // Step 4 (Re-init Calls SDK) was removed as initializing the native Calls SDK
+    // multiple times during the app lifecycle causes a fatal crash on iOS.
   }
 
   // ─── SessionStatusListeners ───────────────────────────────────────

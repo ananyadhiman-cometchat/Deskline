@@ -34,10 +34,10 @@ class CometChatPushService {
   static bool _channelInitialized = false;
 
   /// FCM provider ID configured in the CometChat dashboard.
-  /// Set via dart-define: --dart-define=COMETCHAT_FCM_PROVIDER_ID=...
+  /// Override at build time with: --dart-define=COMETCHAT_FCM_PROVIDER_ID=...
   static const _fcmProviderId = String.fromEnvironment(
     'COMETCHAT_FCM_PROVIDER_ID',
-    defaultValue: '',
+    defaultValue: 'deskline-fcm',
   );
 
   /// Initialize the CometChat notification channel.
@@ -77,7 +77,31 @@ class CometChatPushService {
   /// This enables CometChat to send push notifications for new messages
   /// and incoming calls when the app is in the background or terminated.
   static Future<void> registerToken() async {
+    debugPrint('💬 CometChat push: registerToken() called (provider=$_fcmProviderId)');
     try {
+      // On iOS, FCM cannot issue a token until Apple has delivered the APNS
+      // token to the device. This arrives asynchronously after launch, so we
+      // poll for it before attempting registration. Without the APNS token,
+      // getToken() throws `apns-token-not-set` and push never works.
+      if (Platform.isIOS) {
+        String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        var attempts = 0;
+        while (apnsToken == null && attempts < 10) {
+          await Future.delayed(const Duration(seconds: 2));
+          apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+          attempts++;
+        }
+        if (apnsToken == null) {
+          debugPrint(
+              '💬 CometChat push: APNS token still null after waiting. '
+              'Check: (1) Push Notifications + Background Modes capabilities in Xcode, '
+              '(2) APNs Auth Key (.p8) uploaded to Firebase Console, '
+              '(3) running on a real device with a valid provisioning profile.');
+          return;
+        }
+        debugPrint('💬 CometChat push: APNS token received ✓');
+      }
+
       final fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken == null) {
         debugPrint(

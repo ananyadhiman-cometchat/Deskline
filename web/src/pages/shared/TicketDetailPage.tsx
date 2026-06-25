@@ -32,6 +32,7 @@ export default function TicketDetailPage() {
 
   const [isEscalateModalOpen, setEscalateModalOpen] = useState(false)
   const [isResolutionModalOpen, setResolutionModalOpen] = useState(false)
+  const [hasIntercepted, setHasIntercepted] = useState(false)
   const [statusDraft, setStatusDraft] = useState<string>('')
   const showToast = useUIStore((s) => s.showToast)
 
@@ -149,11 +150,11 @@ export default function TicketDetailPage() {
       {ticket.status === 'escalated' && <EscalationBanner />}
 
       {/* Intercept (Join) button for admins/supervisors */}
-      {(user?.role === 'admin' || user?.role === 'supervisor') && ticket.cometchatConvoId && (
+      {(user?.role === 'admin' || user?.role === 'supervisor') && ticket.cometchatConvoId && ticket.agentId !== user?.id && ticket.employeeId !== user?.id && !hasIntercepted && (
         <div className="flex justify-end">
           <Button
             size="sm"
-            onClick={() => interceptMutation.mutate()}
+            onClick={() => interceptMutation.mutate(undefined, { onSuccess: () => setHasIntercepted(true) })}
             isLoading={interceptMutation.isPending}
           >
             Join Conversation
@@ -205,6 +206,7 @@ export default function TicketDetailPage() {
           {/* CometChat Communication — replaces old thread when conversation exists */}
           {ticket.cometchatConvoId && (
             <TicketChatSection
+              key={hasIntercepted ? 'intercepted' : 'normal'}
               conversationId={ticket.cometchatConvoId}
               ticketStatus={ticket.status}
               subType={ticket.subType}

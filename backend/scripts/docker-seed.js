@@ -155,10 +155,10 @@ async function seed() {
 
   // ─── Create Users ────────────────────────────────────────────
   const userDefs = [];
-  for (let i = 1; i <= 5; i++) userDefs.push({ name: `Admin ${i}`, email: `admin${i}@deskline.local`, role: 'admin', dept: 'General' });
-  for (let i = 1; i <= 10; i++) userDefs.push({ name: `Supervisor ${i}`, email: `supervisor${i}@deskline.local`, role: 'supervisor', dept: departments[i % 3] });
-  for (let i = 1; i <= 20; i++) userDefs.push({ name: `Agent ${i}`, email: `agent${i}@deskline.local`, role: 'agent', dept: departments[i % 3] });
-  for (let i = 1; i <= 70; i++) userDefs.push({ name: `Employee ${i}`, email: `employee${i}@deskline.local`, role: 'employee', dept: departments[i % 3] });
+  for (let i = 1; i <= 2; i++) userDefs.push({ name: `Admin ${i}`, email: `admin${i}@deskline.local`, role: 'admin', dept: 'General' });
+  for (let i = 1; i <= 3; i++) userDefs.push({ name: `Supervisor ${i}`, email: `supervisor${i}@deskline.local`, role: 'supervisor', dept: departments[i % 3] });
+  for (let i = 1; i <= 5; i++) userDefs.push({ name: `Agent ${i}`, email: `agent${i}@deskline.local`, role: 'agent', dept: departments[i % 3] });
+  for (let i = 1; i <= 60; i++) userDefs.push({ name: `Employee ${i}`, email: `employee${i}@deskline.local`, role: 'employee', dept: departments[i % 3] });
 
   for (const u of userDefs) {
     const loginDays = randomInt(0, 30);
@@ -193,10 +193,9 @@ async function seed() {
 
     if (tmpl.sub === 'escalation') {
       assignedAgent = deptSupervisors.length > 0 ? randomFrom(deptSupervisors) : randomFrom(supervisors);
-    } else if (tmpl.sub === 'action' || tmpl.sub === 'conversation') {
+    } else {
       assignedAgent = deptAgents.length > 0 ? randomFrom(deptAgents) : randomFrom(agents);
     }
-    // information tickets: no agent assigned initially
 
     // Determine status based on ticket age
     const statusIdx = i % STATUSES.length;
@@ -419,6 +418,58 @@ async function seed() {
   console.log('\nLogin credentials for all users: Password123!');
   console.log('Email pattern: {role}{number}@deskline.local');
   console.log('Examples: employee1@deskline.local, agent1@deskline.local, supervisor1@deskline.local, admin1@deskline.local');
+
+  // ─── CometChat Sync ────────────────────────────────────────────────
+  const appId = process.env.COMETCHAT_APP_ID;
+  const region = process.env.COMETCHAT_REGION;
+  const apiKey = process.env.COMETCHAT_REST_API_KEY;
+
+  if (appId && region && apiKey) {
+    console.log('\nSyncing users to CometChat...');
+    try {
+      const usersToSync = allUsers.map(u => ({
+        uid: u.id,
+        name: u.name,
+        tags: [`role:${u.role}`, `dept:${u.department}`]
+      }));
+
+      // CometChat does not support bulk array POST to /users. Create them individually with a concurrency of 10.
+      let successCount = 0;
+      for (let i = 0; i < usersToSync.length; i += 10) {
+        const chunk = usersToSync.slice(i, i + 10);
+        await Promise.all(chunk.map(async (u) => {
+          try {
+            const response = await fetch(`https://${appId}.api-${region}.cometchat.io/v3/users`, {
+              method: 'POST',
+              headers: {
+                'apiKey': apiKey,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify(u)
+            });
+
+            if (response.ok || response.status === 409) {
+              successCount++;
+            } else {
+              const errData = await response.json().catch(() => ({}));
+              console.error(`[CometChat Sync] Failed to sync user ${u.uid}:`, errData);
+            }
+          } catch (e) {
+            console.error(`[CometChat Sync] Request failed for ${u.uid}:`, e.message);
+          }
+        }));
+      }
+
+      // Update the database to set cometchat_uid
+      await pool.query('UPDATE users SET cometchat_uid = id WHERE cometchat_uid IS NULL');
+      console.log(`  CometChat Sync: ${successCount} users synced and database updated.`);
+    } catch (e) {
+      console.error('[CometChat Sync] Error during sync:', e.message);
+    }
+  } else {
+    console.warn('\nCometChat credentials missing, skipping sync.');
+  }
 
   await pool.end();
 }

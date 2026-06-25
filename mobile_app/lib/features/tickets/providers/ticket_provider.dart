@@ -29,6 +29,7 @@ final ticketsProvider = FutureProvider.family<PaginatedResponse<Ticket>,
     status: params.status,
     category: params.category,
     priority: params.priority,
+    agentId: params.agentId,
   );
 });
 
@@ -64,6 +65,7 @@ class TicketListParams {
   final TicketStatus? status;
   final TicketCategory? category;
   final TicketPriority? priority;
+  final String? agentId;
 
   const TicketListParams({
     this.page = 1,
@@ -71,6 +73,7 @@ class TicketListParams {
     this.status,
     this.category,
     this.priority,
+    this.agentId,
   });
 
   @override
@@ -81,8 +84,9 @@ class TicketListParams {
           pageSize == other.pageSize &&
           status == other.status &&
           category == other.category &&
-          priority == other.priority;
+          priority == other.priority &&
+          agentId == other.agentId;
 
   @override
-  int get hashCode => Object.hash(page, pageSize, status, category, priority);
+  int get hashCode => Object.hash(page, pageSize, status, category, priority, agentId);
 }

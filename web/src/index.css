@@ -503,6 +503,21 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 
+.topbar-title {
+  font-family: var(--font-family-heading);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-navy);
+}
+
+@media (max-width: 640px) {
+  .topbar-title {
+    display: none;
+  }
+}
+
 .card-title {
   font-family: var(--font-family-heading);
   font-size: 13px;
@@ -1838,3 +1853,13 @@ body {
   height: 100% !important;
 }
 
+/* --- Read-Only Conversation (Calls Disabled) --- */
+/* Prevent joining calls or interacting with buttons when ticket is resolved/closed */
+.calls-disabled [class*="custom-message"],
+.calls-disabled [class*="meeting"],
+.calls-disabled button,
+.calls-disabled [role="button"] {
+  pointer-events: none !important;
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}

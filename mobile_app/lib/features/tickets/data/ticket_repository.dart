@@ -18,6 +18,7 @@ abstract class TicketRepository {
     TicketPriority? priority,
     String? assignedToMe,
     String? search,
+    String? agentId,
   });
 
   Future<Ticket> getTicketById(String id);

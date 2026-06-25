@@ -19,6 +19,7 @@ class TicketApiService {
     String? status,
     String? category,
     String? subType,
+    String? agentId,
   }) {
     final queryParams = <String, dynamic>{
       'page': page,
@@ -27,6 +28,7 @@ class TicketApiService {
     if (status != null) queryParams['status'] = status;
     if (category != null) queryParams['category'] = category;
     if (subType != null) queryParams['subType'] = subType;
+    if (agentId != null) queryParams['agentId'] = agentId;
 
     return _dio.get(ApiEndpoints.tickets, queryParameters: queryParams);
   }

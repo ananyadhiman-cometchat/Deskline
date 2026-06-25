@@ -1,6 +1,7 @@
 import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Global navigator key for call navigation.
 ///
@@ -338,6 +339,27 @@ class _AcceptedCallScreenState extends State<_AcceptedCallScreen> {
   @override
   void initState() {
     super.initState();
+    _requestPermissionsAndJoin();
+  }
+
+  void _requestPermissionsAndJoin() async {
+    // Request camera + mic before joinSession: the native WebRTC layer
+    // accesses them immediately on join. Without this gate, iOS terminates
+    // the app when NSCameraUsageDescription / NSMicrophoneUsageDescription
+    // are present but permission has not been granted yet.
+    final micStatus = await Permission.microphone.request();
+    final camStatus = await Permission.camera.request();
+
+    if (micStatus.isDenied || camStatus.isDenied) {
+      if (mounted) {
+        setState(() {
+          _error = 'Camera and microphone permissions are required for calls. '
+              'Please allow them in Settings.';
+          _isJoining = false;
+        });
+      }
+      return;
+    }
     _joinSession();
   }
 
