@@ -8,9 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      PGPORT: "5433"
     ports:
-      - "5433:5433"
+      - "127.0.0.1:5433:5432"     # loopback only — ALB never touches db
     volumes:
       - pgdata_cometchat:/var/lib/postgresql/data
     healthcheck:
@@ -27,7 +26,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
+      PORT: 4000                   # internal
       DATABASE_URL: ${DATABASE_URL}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -43,12 +42,13 @@ services:
       COMETCHAT_WEBHOOK_SECRET: ${COMETCHAT_WEBHOOK_SECRET}
       COMETCHAT_AI_AGENT_UID: ${COMETCHAT_AI_AGENT_UID}
     ports:
-      - "4001:4001"
+      - "4001:4000"                # 0.0.0.0:4001 -> container 4000 (ALB TG-api-cc)
 
   web:
     build:
       context: ./web
       args:
+        VITE_API_URL: ${VITE_API_URL:-}   # empty -> SPA calls relative /api (ALB routes it)
         VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
         VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
         VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
@@ -60,7 +60,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8081:8081"
+      - "8081:80"                  # 0.0.0.0:8081 -> container 80 (ALB TG-web-cc)
 
 volumes:
   pgdata_cometchat:
