@@ -1,10 +1,16 @@
-# Production / staging compose for deskline.cometchat-staging.com.
+# Production / staging compose for integrateddeskline.cometchat-staging.com.
 # Architecture: ALB (TLS) -> host nginx (:80) -> these containers (bound to 127.0.0.1).
 #
 # Usage on the server:
 #   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 #
 # Nothing here is exposed to 0.0.0.0; host nginx is the only public listener.
+#
+# Ports offset by +1 from stage-1 deployment to allow both to run on the same host:
+#   stage-1 → db:5432  backend:4000  web:8080
+#   this    → db:5433  backend:4001  web:8081
+
+name: deskline-cometchat
 
 services:
   db:
@@ -15,9 +21,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_cometchat:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
@@ -32,7 +38,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: ${PORT:-4000}
+      PORT: ${PORT:-4001}
       DATABASE_URL: ${DATABASE_URL}
       CORS_ORIGINS: ${CORS_ORIGINS}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
@@ -50,7 +56,7 @@ services:
       COMETCHAT_WEBHOOK_SECRET: ${COMETCHAT_WEBHOOK_SECRET:-}
       COMETCHAT_AI_AGENT_UID: ${COMETCHAT_AI_AGENT_UID:-}
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:4001:4001"
 
   web:
     build:
@@ -68,7 +74,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8081:80"
 
 volumes:
-  pgdata:
+  pgdata_cometchat:

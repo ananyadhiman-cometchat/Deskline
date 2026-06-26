@@ -1,6 +1,6 @@
-# DeskLine — Staging Deployment
+# DeskLine — Staging Deployment (CometChat Integration Branch)
 
-Target: `deskline.cometchat-staging.com`
+Target: `integrateddeskline.cometchat-staging.com`
 Architecture: **Client → ALB (TLS) → host nginx (:80) → docker containers (127.0.0.1)**
 
 ```
@@ -9,8 +9,8 @@ client  ─────────────▶  ALB  ─────HTTP:80�
                                                     │
                                 ┌───────────────────┼──────────────────┐
                                 ▼                                       ▼
-                       127.0.0.1:8080                            127.0.0.1:4000
-                       (web container,                          (backend container,
+                        127.0.0.1:8081                            127.0.0.1:4001
+                        (web container,                          (backend container,
                         nginx + SPA)                             Express + Prisma)
                                                                        │
                                                                        ▼
@@ -63,7 +63,7 @@ openssl rand -hex 64   # JWT_REFRESH_SECRET
 ## 3. Install host nginx vhost
 
 ```bash
-sudo cp deploy/nginx/deskline.cometchat-staging.conf /etc/nginx/conf.d/
+sudo cp deploy/nginx/integrateddeskline.cometchat-staging.conf /etc/nginx/conf.d/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -87,8 +87,8 @@ docker compose -f docker-compose.prod.yml logs -f backend
 Smoke test from the host:
 
 ```bash
-curl -s http://127.0.0.1:4000/api/health
-curl -s -H 'Host: deskline.cometchat-staging.com' http://127.0.0.1/api/health
+curl -s http://127.0.0.1:4001/api/health
+curl -s -H 'Host: integrateddeskline.cometchat-staging.com' http://127.0.0.1/api/health
 ```
 
 Both should return `{"status":"ok","service":"DeskLine API"}`.
@@ -103,15 +103,15 @@ Both should return `{"status":"ok","service":"DeskLine API"}`.
 ## 6. Verify end-to-end
 
 ```bash
-curl -i https://deskline.cometchat-staging.com/api/health
+curl -i https://integrateddeskline.cometchat-staging.com/api/health
 # Expect 200 and {"status":"ok",...}
 
 # SPA loads
-curl -I https://deskline.cometchat-staging.com/
+curl -I https://integrateddeskline.cometchat-staging.com/
 # Expect 200, Content-Type: text/html
 ```
 
-Open `https://deskline.cometchat-staging.com/` in a browser, log in with a seeded user, and confirm `/api/auth/login` works in the network tab.
+Open `https://integrateddeskline.cometchat-staging.com/` in a browser, log in with a seeded user, and confirm `/api/auth/login` works in the network tab.
 
 ---
 
