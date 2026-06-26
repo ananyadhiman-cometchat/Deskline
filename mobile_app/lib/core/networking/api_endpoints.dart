@@ -5,12 +5,11 @@ class ApiEndpoints {
 
   /// Base URL for the DeskLine backend.
   ///
-  /// Android emulator: use 10.0.2.2 to reach the host machine's localhost
-  /// (the Docker backend exposed on port 4000).
-  /// iOS simulator: use localhost / 127.0.0.1.
-  /// Physical device (same WiFi): use the host Mac's LAN IP, e.g. 192.168.1.62.
-  /// Staging: https://deskline.cometchat-staging.com/api
-  static const String baseUrl = 'http://10.0.2.2:4000/api';
+  /// Android emulator (local): http://10.0.2.2:4001/api
+  /// iOS simulator (local):    http://localhost:4001/api
+  /// Physical device (LAN):    http://<host-mac-ip>:4001/api
+  /// Staging (active):         https://integrateddeskline.cometchat-staging.com/api
+  static const String baseUrl = 'https://integrateddeskline.cometchat-staging.com/api';
 
   // Auth
   static const String login = '/auth/login';
