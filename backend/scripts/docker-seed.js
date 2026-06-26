@@ -8,6 +8,16 @@
  */
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// Load env for local runs. In Docker these files are absent and the env is
+// injected by docker-compose, so these calls are harmless no-ops there.
+// dotenv never overrides already-set vars, so loading order is non-destructive.
+const __here = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__here, '../.env') });       // backend/.env (DB, JWT)
+config({ path: resolve(__here, '../../.env') });    // project-root .env (CometChat)
 
 const { Pool } = pg;
 
@@ -154,19 +164,21 @@ async function seed() {
   const departments = ['IT', 'HR', 'General'];
 
   // ─── Create Users ────────────────────────────────────────────
+  // Stable, deterministic IDs (e.g. "admin-1", "employee-3") so the CometChat
+  // UID is reused across re-seeds instead of generating new orphans each time.
   const userDefs = [];
-  for (let i = 1; i <= 2; i++) userDefs.push({ name: `Admin ${i}`, email: `admin${i}@deskline.local`, role: 'admin', dept: 'General' });
-  for (let i = 1; i <= 3; i++) userDefs.push({ name: `Supervisor ${i}`, email: `supervisor${i}@deskline.local`, role: 'supervisor', dept: departments[i % 3] });
-  for (let i = 1; i <= 5; i++) userDefs.push({ name: `Agent ${i}`, email: `agent${i}@deskline.local`, role: 'agent', dept: departments[i % 3] });
-  for (let i = 1; i <= 60; i++) userDefs.push({ name: `Employee ${i}`, email: `employee${i}@deskline.local`, role: 'employee', dept: departments[i % 3] });
+  for (let i = 1; i <= 2; i++) userDefs.push({ id: `admin-${i}`, name: `Admin ${i}`, email: `admin${i}@deskline.local`, role: 'admin', dept: 'General' });
+  for (let i = 1; i <= 3; i++) userDefs.push({ id: `supervisor-${i}`, name: `Supervisor ${i}`, email: `supervisor${i}@deskline.local`, role: 'supervisor', dept: departments[i % 3] });
+  for (let i = 1; i <= 5; i++) userDefs.push({ id: `agent-${i}`, name: `Agent ${i}`, email: `agent${i}@deskline.local`, role: 'agent', dept: departments[i % 3] });
+  for (let i = 1; i <= 60; i++) userDefs.push({ id: `employee-${i}`, name: `Employee ${i}`, email: `employee${i}@deskline.local`, role: 'employee', dept: departments[i % 3] });
 
   for (const u of userDefs) {
     const loginDays = randomInt(0, 30);
     await pool.query(
       `INSERT INTO users (id, name, email, password_hash, role, department, is_active, last_login_at, created_at, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4::"UserRole", $5::"Department", true, $6, $7, NOW())
+       VALUES ($1, $2, $3, $4, $5::"UserRole", $6::"Department", true, $7, $8, NOW())
        ON CONFLICT (email) DO NOTHING`,
-      [u.name, u.email, hash, u.role, u.dept, daysAgo(loginDays), daysAgo(randomInt(60, 180))]
+      [u.id, u.name, u.email, hash, u.role, u.dept, daysAgo(loginDays), daysAgo(randomInt(60, 180))]
     );
   }
 
@@ -427,43 +439,92 @@ async function seed() {
   if (appId && region && apiKey) {
     console.log('\nSyncing users to CometChat...');
     try {
-      const usersToSync = allUsers.map(u => ({
-        uid: u.id,
-        name: u.name,
-        tags: [`role:${u.role}`, `dept:${u.department}`]
-      }));
+      const baseUrl = `https://${appId}.api-${region}.cometchat.io/v3`;
+      const headers = {
+        apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
 
-      // CometChat does not support bulk array POST to /users. Create them individually with a concurrency of 10.
-      let successCount = 0;
-      for (let i = 0; i < usersToSync.length; i += 10) {
-        const chunk = usersToSync.slice(i, i + 10);
-        await Promise.all(chunk.map(async (u) => {
-          try {
-            const response = await fetch(`https://${appId}.api-${region}.cometchat.io/v3/users`, {
-              method: 'POST',
-              headers: {
-                'apiKey': apiKey,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              body: JSON.stringify(u)
-            });
+      // 1. Fetch the set of UIDs that already exist in CometChat so we update
+      //    them in place instead of blindly creating duplicates (which would
+      //    exhaust the app's user limit on re-seeds).
+      const existingUids = new Set();
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const listRes = await fetch(`${baseUrl}/users?perPage=100&page=${page}`, { headers });
+        if (!listRes.ok) {
+          console.warn(`[CometChat Sync] Could not list existing users (status ${listRes.status}); proceeding with create + 409 fallback.`);
+          break;
+        }
+        const listData = await listRes.json();
+        for (const u of listData.data ?? []) existingUids.add(u.uid);
+        totalPages = listData.meta?.pagination?.total_pages ?? 1;
+        page += 1;
+      } while (page <= totalPages);
 
-            if (response.ok || response.status === 409) {
-              successCount++;
-            } else {
-              const errData = await response.json().catch(() => ({}));
-              console.error(`[CometChat Sync] Failed to sync user ${u.uid}:`, errData);
-            }
-          } catch (e) {
-            console.error(`[CometChat Sync] Request failed for ${u.uid}:`, e.message);
-          }
-        }));
+      console.log(`  Found ${existingUids.size} existing CometChat users.`);
+
+      // 2. Create missing users / update existing ones. Each user carries the
+      //    top-level `role` (matching the CometChat dashboard Role IDs:
+      //    admin/supervisor/agent/employee) plus role:/dept: tags.
+      let created = 0;
+      let updated = 0;
+      let failed = 0;
+
+      const syncOne = async (u) => {
+        const body = {
+          uid: u.id,
+          name: u.name,
+          role: u.role,
+          tags: [`role:${u.role}`, `dept:${u.dept}`],
+        };
+
+        if (existingUids.has(u.id)) {
+          // Update in place (uid is immutable, so exclude it from the body).
+          const { uid, ...updateBody } = body;
+          const res = await fetch(`${baseUrl}/users/${u.id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(updateBody),
+          });
+          if (res.ok) { updated++; return; }
+          failed++;
+          console.error(`[CometChat Sync] Failed to update ${u.id}: ${res.status}`);
+          return;
+        }
+
+        const res = await fetch(`${baseUrl}/users`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+        if (res.ok) { created++; return; }
+        if (res.status === 409) {
+          // Already exists (race / listing gap) — fall back to update.
+          const { uid, ...updateBody } = body;
+          await fetch(`${baseUrl}/users/${u.id}`, { method: 'PUT', headers, body: JSON.stringify(updateBody) }).catch(() => {});
+          updated++;
+          return;
+        }
+        failed++;
+        const errData = await res.json().catch(() => ({}));
+        console.error(`[CometChat Sync] Failed to create ${u.id}:`, errData);
+      };
+
+      // Process with a concurrency of 10 to stay under REST rate limits.
+      for (let i = 0; i < userDefs.length; i += 10) {
+        const chunk = userDefs.slice(i, i + 10);
+        await Promise.all(chunk.map((u) => syncOne(u).catch((e) => {
+          failed++;
+          console.error(`[CometChat Sync] Request failed for ${u.id}:`, e.message);
+        })));
       }
 
-      // Update the database to set cometchat_uid
+      // Record the CometChat UID (= DeskLine id) on every seeded user.
       await pool.query('UPDATE users SET cometchat_uid = id WHERE cometchat_uid IS NULL');
-      console.log(`  CometChat Sync: ${successCount} users synced and database updated.`);
+      console.log(`  CometChat Sync: created ${created}, updated ${updated}, failed ${failed}. Database updated.`);
     } catch (e) {
       console.error('[CometChat Sync] Error during sync:', e.message);
     }

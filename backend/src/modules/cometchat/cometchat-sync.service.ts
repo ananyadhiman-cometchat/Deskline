@@ -46,6 +46,7 @@ export async function syncNewUser(user: DesklineUserForSync): Promise<SyncResult
       await client.createUser({
         uid: user.id,
         name: user.name,
+        role: user.role,
         tags,
       });
 
@@ -59,8 +60,19 @@ export async function syncNewUser(user: DesklineUserForSync): Promise<SyncResult
     } catch (error) {
       if (error instanceof CometChatApiError) {
         lastError = error.message;
-        // If user already exists in CometChat, treat as success
+        // If user already exists in CometChat (stable UID re-sync), update the
+        // existing record so role/tags/name stay in sync, then treat as success.
         if (error.statusCode === 409) {
+          try {
+            const client = getCometChatClient();
+            await client.updateUser(user.id, {
+              name: user.name,
+              role: user.role,
+              tags: [`role:${user.role}`, `dept:${user.department}`],
+            });
+          } catch {
+            // Non-fatal: the user exists, which is what matters for token gen.
+          }
           await prisma.user.update({
             where: { id: user.id },
             data: { cometchatUid: user.id },
@@ -87,20 +99,63 @@ export async function syncNewUser(user: DesklineUserForSync): Promise<SyncResult
 }
 
 /**
+ * Fetch the set of all existing CometChat user UIDs (paginated).
+ * Returns an empty set if listing fails, so callers can degrade gracefully.
+ */
+async function fetchExistingCometChatUids(): Promise<Set<string>> {
+  const client = getCometChatClient();
+  const uids = new Set<string>();
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const { users, pagination } = await client.listUsers({ page, perPage: 100 });
+    for (const u of users) uids.add(u.uid);
+    totalPages = pagination.totalPages;
+    page += 1;
+  } while (page <= totalPages);
+
+  return uids;
+}
+
+/**
  * Batch-sync multiple DeskLine users to CometChat.
- * Uses the bulk user creation API for efficiency.
+ *
+ * Checks which users already exist in CometChat first, then updates the
+ * existing ones (role/tags/name) and only creates the missing ones. This
+ * prevents duplicate creation and avoids exhausting the app's user limit on
+ * re-seeds. If the existence check fails (e.g. CometChat unreachable), falls
+ * back to per-user sync which still handles the 409 "already exists" case.
  *
  * @param users - Array of DeskLine users to sync
  * @returns BatchSyncResult with totals and individual results
  */
 export async function batchSyncUsers(users: DesklineUserForSync[]): Promise<BatchSyncResult> {
-  // Placeholder — full implementation in task 2.2
   const results: SyncResult[] = [];
   let successful = 0;
   let failed = 0;
 
+  let existingUids: Set<string> | null = null;
+  try {
+    existingUids = await fetchExistingCometChatUids();
+    console.log(`[CometChat Sync] Found ${existingUids.size} existing users in CometChat.`);
+  } catch (error) {
+    console.warn(
+      '[CometChat Sync] Could not list existing users; falling back to per-user create/409 handling.',
+      error instanceof Error ? error.message : error
+    );
+  }
+
   for (const user of users) {
-    const result = await syncNewUser(user);
+    let result: SyncResult;
+
+    if (existingUids && existingUids.has(user.id)) {
+      // Already exists — update in place instead of creating a duplicate.
+      result = await updateExistingUser(user);
+    } else {
+      result = await syncNewUser(user);
+    }
+
     results.push(result);
     if (result.success) {
       successful++;
@@ -110,6 +165,34 @@ export async function batchSyncUsers(users: DesklineUserForSync[]): Promise<Batc
   }
 
   return { total: users.length, successful, failed, results };
+}
+
+/**
+ * Update an existing CometChat user's name/role/tags and ensure the
+ * cometchatUid is recorded in the database.
+ */
+async function updateExistingUser(user: DesklineUserForSync): Promise<SyncResult> {
+  try {
+    const client = getCometChatClient();
+    await client.updateUser(user.id, {
+      name: user.name,
+      role: user.role,
+      tags: [`role:${user.role}`, `dept:${user.department}`],
+    });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { cometchatUid: user.id },
+    });
+    return { success: true, uid: user.id };
+  } catch (error) {
+    const message =
+      error instanceof CometChatApiError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error';
+    return { success: false, uid: user.id, error: message };
+  }
 }
 
 /**

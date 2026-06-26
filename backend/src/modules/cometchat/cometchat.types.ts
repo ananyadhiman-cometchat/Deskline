@@ -39,6 +39,8 @@ export interface CometChatUser {
 export interface CreateUserParams {
   uid: string;
   name: string;
+  /** CometChat role ID (e.g. "admin", "supervisor", "agent", "employee"). */
+  role?: string;
   avatar?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -46,6 +48,8 @@ export interface CreateUserParams {
 
 export interface UpdateUserParams {
   name?: string;
+  /** CometChat role ID (e.g. "admin", "supervisor", "agent", "employee"). */
+  role?: string;
   avatar?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;

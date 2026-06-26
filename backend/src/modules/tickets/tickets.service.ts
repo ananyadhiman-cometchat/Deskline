@@ -501,7 +501,11 @@ async function updateTicketAssignee(actor: TicketActor, ticketId: string, agentI
 }
 
 async function escalateTicketInternal(actor: TicketActor, ticketId: string) {
-  if (actor.role !== UserRole.agent && actor.role !== UserRole.supervisor) {
+  if (
+    actor.role !== UserRole.agent &&
+    actor.role !== UserRole.supervisor &&
+    actor.role !== UserRole.admin
+  ) {
     throw new AppError('Forbidden', 403, 'FORBIDDEN');
   }
 

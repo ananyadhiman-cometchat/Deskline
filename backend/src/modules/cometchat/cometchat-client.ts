@@ -41,12 +41,18 @@ export class CometChatApiError extends Error {
  * Base URL: https://{appId}.api-{region}.cometchat.io/v3/
  * Required headers: apiKey, Content-Type, Accept
  */
+export interface ListUsersResult {
+  users: CometChatUser[];
+  pagination: { currentPage: number; totalPages: number; total: number };
+}
+
 export interface CometChatClient {
   createAuthToken(uid: string): Promise<{ authToken: string }>;
   createUser(params: CreateUserParams): Promise<CometChatUser>;
   createUsers(params: CreateUserParams[]): Promise<CometChatUser[]>;
   updateUser(uid: string, params: UpdateUserParams): Promise<CometChatUser>;
-  deleteUser(uid: string): Promise<void>;
+  listUsers(params?: { page?: number; perPage?: number }): Promise<ListUsersResult>;
+  deleteUser(uid: string, permanent?: boolean): Promise<void>;
   setUserTags(uid: string, tags: string[]): Promise<void>;
   createOneOnOneConversation(uid1: string, uid2: string): Promise<{ conversationId: string }>;
   sendMessage(receiverId: string, message: string, senderUid: string, receiverType?: 'user' | 'group'): Promise<void>;
@@ -154,6 +160,7 @@ export function createCometChatClient(): CometChatClient {
         const response = await http.post(endpoint, {
           uid: params.uid,
           name: params.name,
+          ...(params.role && { role: params.role }),
           ...(params.avatar && { avatar: params.avatar }),
           ...(params.metadata && { metadata: params.metadata }),
           ...(params.tags && { tags: params.tags }),
@@ -171,6 +178,7 @@ export function createCometChatClient(): CometChatClient {
         const response = await http.post(endpoint, params.map((p) => ({
           uid: p.uid,
           name: p.name,
+          ...(p.role && { role: p.role }),
           ...(p.avatar && { avatar: p.avatar }),
           ...(p.metadata && { metadata: p.metadata }),
           ...(p.tags && { tags: p.tags }),
@@ -188,6 +196,7 @@ export function createCometChatClient(): CometChatClient {
       try {
         const response = await http.put(endpoint, {
           ...(params.name && { name: params.name }),
+          ...(params.role && { role: params.role }),
           ...(params.avatar && { avatar: params.avatar }),
           ...(params.metadata && { metadata: params.metadata }),
           ...(params.tags && { tags: params.tags }),
@@ -198,10 +207,36 @@ export function createCometChatClient(): CometChatClient {
       }
     },
 
-    async deleteUser(uid: string): Promise<void> {
+    async deleteUser(uid: string, permanent = false): Promise<void> {
       const endpoint = `/users/${uid}`;
       try {
-        await http.delete(endpoint);
+        // CometChat soft-deletes by default; passing { permanent: true } fully
+        // removes the user so it stops counting against the app's user limit.
+        await http.delete(endpoint, { data: { permanent } });
+      } catch (error) {
+        throw wrapError(error, endpoint);
+      }
+    },
+
+    async listUsers(params?: { page?: number; perPage?: number }): Promise<ListUsersResult> {
+      const endpoint = '/users';
+      try {
+        const response = await http.get(endpoint, {
+          params: {
+            page: params?.page ?? 1,
+            perPage: params?.perPage ?? 100,
+          },
+        });
+        const users = (response.data.data ?? []) as CometChatUser[];
+        const pagination = response.data.meta?.pagination ?? {};
+        return {
+          users,
+          pagination: {
+            currentPage: pagination.current_page ?? params?.page ?? 1,
+            totalPages: pagination.total_pages ?? 1,
+            total: pagination.total ?? users.length,
+          },
+        };
       } catch (error) {
         throw wrapError(error, endpoint);
       }

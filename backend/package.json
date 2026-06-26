@@ -15,7 +15,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node scripts/docker-seed.js",
+    "cometchat:cleanup": "tsx scripts/cleanup-cometchat-users.ts"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
