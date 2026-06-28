@@ -48,13 +48,13 @@ export default function ProfilePage() {
       </div>
 
       <Card>
-        <div className="mb-6 flex items-center justify-between border-b border-[var(--color-border)] pb-4">
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[var(--color-border)] pb-4 gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)] font-heading text-2xl text-[var(--color-navy)]">
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)] font-heading text-xl sm:text-2xl text-[var(--color-navy)]">
               {user.name.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <h2 className="font-heading text-xl text-[var(--color-navy)]">{user.name}</h2>
+              <h2 className="font-heading text-lg sm:text-xl text-[var(--color-navy)]">{user.name}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant={user.role}>{ROLE_LABELS[user.role]}</Badge>
                 <span className="text-xs text-[var(--color-muted)] font-mono">{user.department} DEPT</span>

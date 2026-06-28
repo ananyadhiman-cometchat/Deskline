@@ -42,7 +42,7 @@ export default function AnnouncementsPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg" style={{ margin: '0 auto' }}>
+      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-lg mx-auto">
         <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-6 space-y-4">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--color-border)', paddingBottom: '16px', marginBottom: '8px' }}>
             <Megaphone size={18} className="text-[var(--color-brand-red)] flex-shrink-0" style={{ display: 'block' }} />

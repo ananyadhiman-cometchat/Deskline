@@ -222,6 +222,7 @@ export default function LandingPage() {
           NAV
       ══════════════════════════════════════════════════════ */}
       <nav
+        className="lp-nav"
         style={{
           position: 'fixed',
           top: 0,
@@ -328,6 +329,7 @@ export default function LandingPage() {
         }}
       >
         <div
+          className="lp-hero-content"
           style={{
             maxWidth: 1280,
             margin: '0 auto',
@@ -420,6 +422,7 @@ export default function LandingPage() {
 
             {/* Stats Grid */}
             <div
+              className="lp-hero-stats"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(4, 1fr)',
@@ -621,9 +624,9 @@ export default function LandingPage() {
           zIndex: 1,
         }}
       >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }} className="lp-section-padding">
           {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '4rem', alignItems: 'end' }}>
+          <div className="lp-features-header" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '4rem', alignItems: 'end' }}>
             <div>
               <div className="text-section-label" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
                 <span style={{ width: 20, height: 2, background: '#FF4655', display: 'block', flexShrink: 0 }} />
@@ -650,6 +653,7 @@ export default function LandingPage() {
 
           {/* Grid */}
           <div
+            className="lp-features-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
@@ -754,7 +758,7 @@ export default function LandingPage() {
           zIndex: 1,
         }}
       >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }} className="lp-section-padding">
           <div style={{ marginBottom: '4rem' }}>
             <div
               style={{
@@ -789,6 +793,7 @@ export default function LandingPage() {
 
           {/* Visual connector row */}
           <div
+            className="lp-workflow-connector-row"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
@@ -848,6 +853,7 @@ export default function LandingPage() {
 
           {/* Step cards */}
           <div
+            className="lp-workflow-cards"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
@@ -911,21 +917,22 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* ══════════════════════════════════════════════════════
           ROLES
       ══════════════════════════════════════════════════════ */}
-      <section
+      < section
         id="roles"
         style={{
           background: dark ? '#162130' : '#F7F7F7',
           borderBottom: '1px solid var(--theme-border)',
           position: 'relative',
           zIndex: 1,
-        }}
+        }
+        }
       >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }} className="lp-section-padding">
           <div style={{ marginBottom: '3rem' }}>
             <div className="text-section-label" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
               <span style={{ width: 20, height: 2, background: '#FF4655', display: 'block' }} />
@@ -947,6 +954,7 @@ export default function LandingPage() {
           </div>
 
           <div
+            className="lp-roles-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
@@ -1035,12 +1043,12 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* ══════════════════════════════════════════════════════
           PHILOSOPHY
       ══════════════════════════════════════════════════════ */}
-      <section
+      < section
         id="philosophy"
         style={{
           background: 'var(--theme-bg)',
@@ -1050,6 +1058,7 @@ export default function LandingPage() {
         }}
       >
         <div
+          className="lp-philosophy-grid lp-section-padding"
           style={{
             maxWidth: 1280,
             margin: '0 auto',
@@ -1280,12 +1289,12 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
       {/* ══════════════════════════════════════════════════════
           TESTIMONIALS
       ══════════════════════════════════════════════════════ */}
-      <section
+      < section
         id="testimonials"
         style={{
           background: dark ? '#162130' : '#F7F7F7',
@@ -1295,7 +1304,7 @@ export default function LandingPage() {
           zIndex: 1,
         }}
       >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 3rem' }} className="lp-section-padding">
           <div style={{ marginBottom: '3rem' }}>
             <div className="text-section-label" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
               <span style={{ width: 20, height: 2, background: '#FF4655', display: 'block' }} />
@@ -1317,6 +1326,7 @@ export default function LandingPage() {
           </div>
 
           <div
+            className="lp-testimonials-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
@@ -1361,7 +1371,7 @@ export default function LandingPage() {
 
                 {/* Stars */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: '1.25rem' }}>
-                  {[1,2,3,4,5].map((n) => (
+                  {[1, 2, 3, 4, 5].map((n) => (
                     <svg key={n} width="12" height="12" viewBox="0 0 24 24" fill="#FF4655">
                       <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
                     </svg>
@@ -1425,17 +1435,18 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
 
 
       {/* ══════════════════════════════════════════════════════
           FOOTER
       ══════════════════════════════════════════════════════ */}
-      <footer style={{ background: '#0F1923', padding: '4rem 3rem 2rem' }}>
+      < footer style={{ background: '#0F1923', padding: '4rem 3rem 2rem' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {/* Footer Grid */}
           <div
+            className="lp-footer-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: '2fr 1fr 1fr 1fr',
@@ -1557,10 +1568,10 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </footer>
+      </footer >
 
       {/* ── Scoped styles for landing-only components ── */}
-      <style>{`
+      < style > {`
         @keyframes lp-pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
@@ -1590,7 +1601,67 @@ export default function LandingPage() {
         @media (max-width: 640px) {
           .landing-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
-      `}</style>
-    </div>
+      `}</style >
+
+      {/* ── Scoped styles for landing-only components ── */}
+      < style > {`
+        @keyframes lp-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+
+        .lp-badge {
+          display: inline-block;
+          padding: 3px 8px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+
+        .lp-badge-red    { background: #FEE2E2; color: #B91C1C; }
+        .lp-badge-yellow { background: #FEF9C3; color: #A16207; }
+        .lp-badge-green  { background: #DCFCE7; color: #166534; }
+        .lp-badge-blue   { background: #DBEAFE; color: #1D4ED8; }
+
+        /* Landing page responsive overrides */
+        @media (max-width: 900px) {
+          .landing-nav-links { display: none !important; }
+          .landing-hero-right { display: none !important; }
+        }
+
+        @media (max-width: 768px) {
+          .lp-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .lp-workflow-connector-row { display: none !important; }
+          .lp-workflow-cards { grid-template-columns: repeat(2, 1fr) !important; }
+          .lp-roles-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .lp-philosophy-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
+          .lp-testimonials-grid { grid-template-columns: 1fr !important; }
+          .lp-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 2rem !important; }
+          .lp-features-header { grid-template-columns: 1fr !important; }
+          .lp-nav { padding: 0 1.5rem !important; }
+          .lp-section-padding { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+          .lp-hero-content { padding: 60px 1.5rem !important; }
+          .lp-hero-stats { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
+        @media (max-width: 480px) {
+          .lp-features-grid { grid-template-columns: 1fr !important; }
+          .lp-workflow-cards { grid-template-columns: 1fr !important; }
+          .lp-roles-grid { grid-template-columns: 1fr !important; }
+          .lp-footer-grid { grid-template-columns: 1fr !important; }
+          .lp-hero-stats { grid-template-columns: repeat(2, 1fr) !important; }
+          .lp-nav { padding: 0 1rem !important; }
+          .lp-section-padding { padding-left: 1rem !important; padding-right: 1rem !important; }
+          .lp-hero-content { padding: 40px 1rem !important; }
+        }
+
+        @media (max-width: 640px) {
+          .landing-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style >
+    </div >
   )
 }

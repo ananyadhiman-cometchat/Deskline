@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const { data: dashboard } = useAdminDashboard()
-  
+
   // Fetch a quick snapshot of recent logs for the dashboard
   const { data: logsData, isLoading: logsLoading } = useActivityLogs({ pageSize: 5 })
 
@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
         <StatsCard label="Resolved Today" value={dashboard?.totals.resolvedToday ?? 0} />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
             <h2 className="section-label m-0">Recent Activity</h2>
@@ -36,7 +36,7 @@ export default function AdminDashboardPage() {
               View All
             </Button>
           </div>
-          
+
           {logsLoading ? (
             <SkeletonLoader type="text" count={5} />
           ) : logsData?.data ? (
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
               Logs
             </Button>
           </div>
-          
+
 
           <TicketAnalyticsChart
             data={(dashboard?.ticketsByStatus ?? []).map((item, index) => ({

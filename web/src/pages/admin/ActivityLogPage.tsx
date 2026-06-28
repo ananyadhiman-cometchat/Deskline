@@ -20,7 +20,7 @@ export default function ActivityLogPage() {
     // Simplified search: we just put the input into entityType or action for now.
     // If it looks like a UUID, we could put it in entityId.
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchInput)
-    
+
     if (isUUID) {
       setFilters({ page: 1, pageSize: 20 })
       // Currently our filter doesn't have entityId, but we can add it or just clear filters
@@ -41,18 +41,20 @@ export default function ActivityLogPage() {
         <p className="text-[var(--color-muted)]">Comprehensive immutable record of all system mutations.</p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-4 items-end bg-[var(--color-surface)] p-4 border border-[var(--color-border)]">
-        <div className="flex-1 max-w-md">
-          <Input 
-            placeholder="Search by action (e.g. ticket_created)" 
+      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 sm:items-end bg-[var(--color-surface)] p-4 border border-[var(--color-border)]">
+        <div className="flex-1 sm:max-w-md">
+          <Input
+            placeholder="Search by action (e.g. ticket_created)"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <Button type="submit" variant="secondary">Filter</Button>
-        {Object.keys(filters).length > 2 && (
-          <Button type="button" variant="ghost" onClick={clearFilters}>Clear</Button>
-        )}
+        <div className="flex gap-2">
+          <Button type="submit" variant="secondary">Filter</Button>
+          {Object.keys(filters).length > 2 && (
+            <Button type="button" variant="ghost" onClick={clearFilters}>Clear</Button>
+          )}
+        </div>
       </form>
 
       {isError && <ErrorMessage error={error} title="Failed to load logs" />}

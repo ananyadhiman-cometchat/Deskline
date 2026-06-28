@@ -15,7 +15,7 @@ export default function AgentLoadPage() {
   // For the frontend UI phase, we'll build the table structure. Since we only have `useUsers` right now,
   // we'll fetch agents and mock the ticket counts if they aren't on the User model yet, or assume they will be added.
   // Actually, standard `User` interface doesn't have `openTicketsCount`. We will display what we have or mock the counts for the UI until backend is wired.
-  
+
   // Backend pagination validation appears to reject very large page sizes.
   // Use default ticket listing instead of requesting 200 records.
   const { data, isLoading, isError, error } = useAgentLoad()
@@ -40,7 +40,7 @@ export default function AgentLoadPage() {
             <p>No active agents found.</p>
           </div>
         ) : (
-          <div className="table-wrapper m-0 border-none">
+          <div className="table-wrapper m-0 border-none overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -54,20 +54,20 @@ export default function AgentLoadPage() {
               <tbody>
                 {(data?.data || []).map((agent: any) => (
                   <tr key={agent.id}>
-                    <td className="font-semibold text-[var(--color-navy)]">{agent.name}</td>
-                    <td>{agent.department}</td>
-                    <td>
+                    <td data-label="Agent" className="font-semibold text-[var(--color-navy)]">{agent.name}</td>
+                    <td data-label="Dept">{agent.department}</td>
+                    <td data-label="Status">
                       {true ? (
                         <Badge variant="open">Active</Badge>
                       ) : (
                         <Badge variant="closed">Offline</Badge>
                       )}
                     </td>
-                    <td className="text-center font-mono font-bold text-[var(--color-brand-red)]">
+                    <td data-label="Open" className="text-center font-mono font-bold text-[var(--color-brand-red)]">
                       {/* Placeholder until backend provides these counts */}
                       {agent._count?.assignedTickets ?? 0}
                     </td>
-                    <td className="text-center font-mono text-[var(--color-muted)]">
+                    <td data-label="Resolved" className="text-center font-mono text-[var(--color-muted)]">
                       -
                     </td>
                   </tr>

@@ -37,7 +37,7 @@ export default function AgentMetricsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatsCard label="Assigned" value={assigned} />
         <StatsCard label="In Progress" value={inProgress} />
         <StatsCard label="Escalated" value={escalated} accent={escalated > 0} />
@@ -47,106 +47,106 @@ export default function AgentMetricsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2 flex flex-col">
           <Card className={`flex-1 relative overflow-hidden flex flex-col items-center justify-center p-12 border ${healthBorder} transition-colors duration-500`}>
-             <div className={`absolute inset-0 bg-gradient-to-br ${isOptimal ? 'from-emerald-500/5' : isAcceptable ? 'from-amber-500/5' : 'from-red-500/5'} to-transparent`} />
-             
-             <Target className={`absolute -right-12 -bottom-12 w-96 h-96 ${healthColor} opacity-5 transition-colors duration-500`} />
-             
-             <div className="z-10 flex flex-col items-center text-center max-w-lg">
-                <div className={`w-20 h-20 rounded-full ${healthBg} ${healthColor} flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(0,0,0,0.1)]`}>
-                   {isOptimal ? <CheckCircle size={40} /> : isAcceptable ? <Activity size={40} /> : <ShieldAlert size={40} />}
-                </div>
-                <h2 className="font-heading text-5xl tracking-widest text-[var(--theme-text-main)] mb-4">{rate}%</h2>
-                <div className="section-label mb-4 flex items-center justify-center gap-2">
-                  <Target size={16} />
-                  Resolution Rate
-                </div>
-                <p className="text-lg text-[var(--color-muted)]">
-                   {isOptimal 
-                      ? 'Exceptional performance. You are efficiently resolving assigned tickets.' 
-                      : isAcceptable 
-                         ? 'Solid work. Focus on closing out your remaining active tickets to boost your rate.'
-                         : 'Resolution rate is below nominal thresholds. Consider escalating complex tickets if blocked.'}
-                </p>
-             </div>
-          </Card>
-          
-          <div className="grid grid-cols-2 gap-6">
-             <Card className="p-8 relative overflow-hidden group hover:border-[var(--color-border-hover)] transition-colors">
-                <CheckSquare className="absolute right-[-10%] top-[-10%] w-48 h-48 text-[var(--color-muted)] opacity-[0.03] group-hover:scale-110 transition-transform duration-700" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-6">
-                    <CheckSquare size={14} />
-                    Work Breakdown
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[var(--color-muted)]">Resolved</span>
-                      <span className="font-heading text-2xl text-[var(--theme-text-main)]">{resolved}</span>
-                    </div>
-                    <div className="w-full bg-[var(--color-border)] h-1 rounded-full overflow-hidden">
-                      <div className="bg-[#10b981] h-full" style={{ width: `${assigned > 0 ? (resolved / assigned) * 100 : 0}%` }} />
-                    </div>
-                  </div>
-                </div>
-             </Card>
+            <div className={`absolute inset-0 bg-gradient-to-br ${isOptimal ? 'from-emerald-500/5' : isAcceptable ? 'from-amber-500/5' : 'from-red-500/5'} to-transparent`} />
 
-             <Card className="p-8 relative overflow-hidden group hover:border-[var(--color-border-hover)] transition-colors">
-                <ArrowUpRight className="absolute right-[-10%] top-[-10%] w-48 h-48 text-[var(--color-muted)] opacity-[0.03] group-hover:scale-110 transition-transform duration-700" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-6">
-                    <ArrowUpRight size={14} />
-                    Active Queue
+            <Target className={`absolute -right-12 -bottom-12 w-96 h-96 ${healthColor} opacity-5 transition-colors duration-500`} />
+
+            <div className="z-10 flex flex-col items-center text-center max-w-lg">
+              <div className={`w-20 h-20 rounded-full ${healthBg} ${healthColor} flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(0,0,0,0.1)]`}>
+                {isOptimal ? <CheckCircle size={40} /> : isAcceptable ? <Activity size={40} /> : <ShieldAlert size={40} />}
+              </div>
+              <h2 className="font-heading text-5xl tracking-widest text-[var(--theme-text-main)] mb-4">{rate}%</h2>
+              <div className="section-label mb-4 flex items-center justify-center gap-2">
+                <Target size={16} />
+                Resolution Rate
+              </div>
+              <p className="text-lg text-[var(--color-muted)]">
+                {isOptimal
+                  ? 'Exceptional performance. You are efficiently resolving assigned tickets.'
+                  : isAcceptable
+                    ? 'Solid work. Focus on closing out your remaining active tickets to boost your rate.'
+                    : 'Resolution rate is below nominal thresholds. Consider escalating complex tickets if blocked.'}
+              </p>
+            </div>
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card className="p-8 relative overflow-hidden group hover:border-[var(--color-border-hover)] transition-colors">
+              <CheckSquare className="absolute right-[-10%] top-[-10%] w-48 h-48 text-[var(--color-muted)] opacity-[0.03] group-hover:scale-110 transition-transform duration-700" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-6">
+                  <CheckSquare size={14} />
+                  Work Breakdown
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[var(--color-muted)]">Resolved</span>
+                    <span className="font-heading text-2xl text-[var(--theme-text-main)]">{resolved}</span>
                   </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[var(--color-muted)]">In Progress</span>
-                      <span className="font-heading text-2xl text-[var(--theme-text-main)]">{inProgress}</span>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[var(--color-brand-red)]">Escalated</span>
-                      <span className="font-heading text-xl text-[var(--theme-text-main)]">{escalated}</span>
-                    </div>
+                  <div className="w-full bg-[var(--color-border)] h-1 rounded-full overflow-hidden">
+                    <div className="bg-[#10b981] h-full" style={{ width: `${assigned > 0 ? (resolved / assigned) * 100 : 0}%` }} />
                   </div>
                 </div>
-             </Card>
+              </div>
+            </Card>
+
+            <Card className="p-8 relative overflow-hidden group hover:border-[var(--color-border-hover)] transition-colors">
+              <ArrowUpRight className="absolute right-[-10%] top-[-10%] w-48 h-48 text-[var(--color-muted)] opacity-[0.03] group-hover:scale-110 transition-transform duration-700" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-6">
+                  <ArrowUpRight size={14} />
+                  Active Queue
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[var(--color-muted)]">In Progress</span>
+                    <span className="font-heading text-2xl text-[var(--theme-text-main)]">{inProgress}</span>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <span className="text-[var(--color-brand-red)]">Escalated</span>
+                    <span className="font-heading text-xl text-[var(--theme-text-main)]">{escalated}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
 
         <div className="flex flex-col">
           <Card className="flex-1 p-8 relative overflow-hidden">
-             <Clock className="absolute right-[-20%] bottom-[-10%] w-64 h-64 text-[var(--color-muted)] opacity-[0.03]" />
-             <div className="relative z-10 flex flex-col h-full">
-                <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-8">
-                  <Clock size={14} />
-                  Shift Insight
-                </div>
-                
-                <div className="flex-1 flex flex-col justify-center gap-8">
-                   <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
-                      <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Current Focus</div>
-                      <div className="text-lg text-[var(--theme-text-main)]">
-                         {inProgress > 0 ? 'Work through your active queue.' : assigned === 0 ? 'Standby for assignment.' : 'Address pending tickets.'}
-                      </div>
-                   </div>
-                   
-                   <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
-                      <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Escalation Load</div>
-                      <div className="text-lg text-[var(--theme-text-main)]">
-                         {escalated === 0 ? 'No escalations requested. Good work.' : `${escalated} ticket(s) required supervisor intervention.`}
-                      </div>
-                   </div>
+            <Clock className="absolute right-[-20%] bottom-[-10%] w-64 h-64 text-[var(--color-muted)] opacity-[0.03]" />
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-2 text-xs font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase mb-8">
+                <Clock size={14} />
+                Shift Insight
+              </div>
 
-                   <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
-                      <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Efficiency</div>
-                      <div className="text-lg text-[var(--theme-text-main)]">
-                         {isOptimal ? 'Top tier. Maintain current velocity.' : isAcceptable ? 'Moderate. Look for process optimisations.' : 'Critically low. Escalate blockers immediately.'}
-                      </div>
-                   </div>
+              <div className="flex-1 flex flex-col justify-center gap-8">
+                <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
+                  <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Current Focus</div>
+                  <div className="text-lg text-[var(--theme-text-main)]">
+                    {inProgress > 0 ? 'Work through your active queue.' : assigned === 0 ? 'Standby for assignment.' : 'Address pending tickets.'}
+                  </div>
                 </div>
-             </div>
+
+                <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
+                  <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Escalation Load</div>
+                  <div className="text-lg text-[var(--theme-text-main)]">
+                    {escalated === 0 ? 'No escalations requested. Good work.' : `${escalated} ticket(s) required supervisor intervention.`}
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-l-2 border-[var(--color-border)] pl-4">
+                  <div className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">Efficiency</div>
+                  <div className="text-lg text-[var(--theme-text-main)]">
+                    {isOptimal ? 'Top tier. Maintain current velocity.' : isAcceptable ? 'Moderate. Look for process optimisations.' : 'Critically low. Escalate blockers immediately.'}
+                  </div>
+                </div>
+              </div>
+            </div>
           </Card>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

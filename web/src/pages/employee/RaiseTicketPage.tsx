@@ -60,7 +60,7 @@ export default function RaiseTicketPage() {
       {/* Form Card */}
       <div className="border border-[var(--color-border)] bg-[var(--theme-bg)]">
         {/* Card Header */}
-        <div className="flex items-center gap-2 px-8 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex items-center gap-2 px-4 sm:px-8 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
           <Info size={16} className="text-[var(--color-muted)]" />
           <span className="font-heading text-sm uppercase tracking-wider text-[var(--color-navy)]">
             Ticket Information
@@ -68,7 +68,7 @@ export default function RaiseTicketPage() {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit(onSubmit)} className="px-8 py-8 space-y-7">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-4 sm:px-8 py-6 sm:py-8 space-y-7">
           <Input
             label="Title"
             {...register('title')}

@@ -70,7 +70,7 @@ export default function TicketDetailPage() {
   const isAssignedAgent = user?.id === ticket.agentId
   const isAgentOrSupervisor = user?.role === 'agent' || user?.role === 'supervisor' || user?.role === 'admin'
   const canUpdateStatus = isAgentOrSupervisor && (isAssignedAgent || user?.role !== 'agent')
-  
+
   const handleStatusUpdate = () => {
     if (statusDraft && statusDraft !== ticket.status) {
       updateMutation.mutate({ status: statusDraft as any }, {
@@ -110,9 +110,9 @@ export default function TicketDetailPage() {
         )}
 
         {canUpdateStatus && ticket.status !== 'closed' && (
-          <div className="flex items-center gap-2 bg-[var(--color-surface)] p-2 border border-[var(--color-border)]">
+          <div className="flex flex-wrap items-center gap-2 bg-[var(--color-surface)] p-2 border border-[var(--color-border)]">
             <Select
-              className="min-w-[140px] m-0"
+              className="min-w-[130px] sm:min-w-[140px] m-0"
               value={statusDraft || ticket.status}
               onChange={(e) => setStatusDraft(e.target.value)}
               options={[
@@ -129,9 +129,9 @@ export default function TicketDetailPage() {
               </Button>
             )}
             {ticket.status === 'in_progress' && (
-              <Button 
-                size="sm" 
-                variant="danger" 
+              <Button
+                size="sm"
+                variant="danger"
                 onClick={() => setEscalateModalOpen(true)}
                 disabled={escalateMutation.isPending}
               >
@@ -205,9 +205,9 @@ export default function TicketDetailPage() {
         isLoading={escalateMutation.isPending}
       />
 
-      <Modal 
-        isOpen={isResolutionModalOpen} 
-        onClose={() => setResolutionModalOpen(false)} 
+      <Modal
+        isOpen={isResolutionModalOpen}
+        onClose={() => setResolutionModalOpen(false)}
         title="Resolution Confirmation Required"
         maxWidth="lg"
       >
@@ -215,10 +215,10 @@ export default function TicketDetailPage() {
           <p className="text-[var(--color-navy)] text-sm leading-relaxed">
             Your ticket has been marked as resolved by the assigned agent. Please review the ticket details and confirm whether your issue has been successfully resolved.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[var(--color-border)] mt-2">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="flex-1"
               onClick={() => rejectMutation.mutate(undefined, { onSuccess: () => setResolutionModalOpen(false) })}
               isLoading={rejectMutation.isPending}
@@ -227,7 +227,7 @@ export default function TicketDetailPage() {
               <XCircle size={16} className="mr-2 text-[var(--color-brand-red)]" />
               Reject & Reopen
             </Button>
-            <Button 
+            <Button
               className="flex-1 !bg-[#10b981] hover:!bg-[#059669] !text-white !border-none !shadow-none hover:!shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all"
               onClick={() => confirmMutation.mutate(undefined, { onSuccess: () => setResolutionModalOpen(false) })}
               isLoading={confirmMutation.isPending}

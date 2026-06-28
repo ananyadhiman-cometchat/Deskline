@@ -29,8 +29,8 @@ export default function AllTicketsPage() {
   // Let's just pass subType=escalation to the backend and filter the rest locally if needed, or assume the backend 
   // can handle an array of statuses. The API contract in SCHEMA doesn't mention array statuses.
   // Let's rely on standard filtering.
-  
-  const currentFilters = activeTab === 'escalation' 
+
+  const currentFilters = activeTab === 'escalation'
     ? { ...filters, subType: 'escalation' as const } // backend should handle open/escalated
     : filters
 
@@ -50,23 +50,21 @@ export default function AllTicketsPage() {
         <p className="text-[var(--color-muted)]">Global view of all system tickets and escalation queues.</p>
       </div>
 
-      <div className="flex space-x-1 border-b border-[var(--color-border)] mb-6">
+      <div className="flex flex-col sm:flex-row sm:space-x-1 border-b border-[var(--color-border)] mb-6">
         <button
-          className={`px-4 py-3 text-sm font-bold uppercase tracking-wider ${
-            activeTab === 'all'
+          className={`px-4 py-3 text-sm font-bold uppercase tracking-wider ${activeTab === 'all'
               ? 'border-b-2 border-[var(--color-brand-red)] text-[var(--color-navy)]'
               : 'text-[var(--color-muted)] hover:text-[var(--color-navy)]'
-          }`}
+            }`}
           onClick={() => { setActiveTab('all'); setFilters({ page: 1, pageSize: 10 }) }}
         >
           All Tickets
         </button>
         <button
-          className={`px-4 py-3 text-sm font-bold uppercase tracking-wider ${
-            activeTab === 'escalation'
+          className={`px-4 py-3 text-sm font-bold uppercase tracking-wider ${activeTab === 'escalation'
               ? 'border-b-2 border-[var(--color-brand-red)] text-[var(--color-navy)]'
               : 'text-[var(--color-muted)] hover:text-[var(--color-navy)]'
-          }`}
+            }`}
           onClick={() => { setActiveTab('escalation'); setFilters({ page: 1, pageSize: 10 }) }}
         >
           Escalation Queue
@@ -98,7 +96,7 @@ export default function AllTicketsPage() {
               onClick={() => navigate(`/tickets/${ticket.id}`)}
             />
           ))}
-          
+
           {data?.meta && data.meta.total > data.meta.pageSize && activeTab === 'all' && (
             <Pagination
               page={data.meta.page}

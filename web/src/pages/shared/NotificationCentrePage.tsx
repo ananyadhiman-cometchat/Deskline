@@ -42,20 +42,20 @@ export default function NotificationCentrePage() {
         <div className="space-y-3">
           {data?.data.map((notification) => (
             <Card key={notification.id} className={!notification.isRead ? 'border-l-4 border-[var(--color-brand-red)]' : 'opacity-70'}>
-              <div className="flex gap-4">
+              <div className="flex gap-3 sm:gap-4">
                 <div className="mt-1 shrink-0">
                   {getIcon(notification.type)}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                     <h3 className={`text-sm font-bold ${!notification.isRead ? 'text-[var(--color-navy)]' : 'text-[var(--color-muted)]'}`}>
                       {notification.title}
                     </h3>
-                    <span className="text-xs text-[var(--color-muted)]">
+                    <span className="text-xs text-[var(--color-muted)] shrink-0">
                       {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <p className="text-sm text-[var(--color-muted)]">{notification.body}</p>
+                  <p className="text-sm text-[var(--color-muted)] break-words">{notification.body}</p>
                 </div>
               </div>
             </Card>

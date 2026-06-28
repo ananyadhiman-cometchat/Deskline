@@ -77,9 +77,9 @@ export default function UserManagementPage() {
         </Button>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
         <Select
-          className="max-w-[200px]"
+          className="w-full sm:w-auto sm:max-w-[200px]"
           value={filters.role || ''}
           onChange={(e) => setFilters({ ...filters, role: e.target.value as any, page: 1 })}
           options={[
@@ -91,7 +91,7 @@ export default function UserManagementPage() {
           ]}
         />
         <Select
-          className="max-w-[200px]"
+          className="w-full sm:w-auto sm:max-w-[200px]"
           value={filters.department || ''}
           onChange={(e) => setFilters({ ...filters, department: e.target.value as any, page: 1 })}
           options={[
@@ -114,10 +114,10 @@ export default function UserManagementPage() {
         </div>
       ) : (
         <div className="border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <UserTable 
-            users={data?.data || []} 
-            onEdit={openEditModal} 
-            onDeactivate={setDeactivatingUser} 
+          <UserTable
+            users={data?.data || []}
+            onEdit={openEditModal}
+            onDeactivate={setDeactivatingUser}
           />
           {data?.meta && data.meta.total > data.meta.pageSize && (
             <Pagination

@@ -87,7 +87,7 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       {/* Mobile Sidebar Overlay */}
-      <div 
+      <div
         className={`sidebar-overlay ${sidebarOpen && isMobile ? 'sidebar-overlay-visible' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
@@ -123,8 +123,8 @@ export function AppLayout() {
         {/* Topbar */}
         <header className="topbar">
           <div className="topbar-left">
-            <button 
-              className="btn btn-ghost btn-sm" 
+            <button
+              className="btn btn-ghost btn-sm"
               onClick={handleToggleSidebar}
               style={{ display: 'flex', padding: '0 8px', borderColor: 'transparent' }}
               aria-label="Toggle Sidebar"
@@ -135,8 +135,8 @@ export function AppLayout() {
           </div>
 
           <div className="topbar-actions">
-            <button 
-              className="btn btn-ghost btn-sm" 
+            <button
+              className="btn btn-ghost btn-sm"
               onClick={toggleTheme}
               style={{ padding: '0 8px', border: 'none' }}
               title="Toggle Theme"
@@ -144,7 +144,7 @@ export function AppLayout() {
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <button 
+            <button
               className="notification-bell"
               onClick={() => navigate('/notifications')}
               aria-label="Notifications"
@@ -155,8 +155,8 @@ export function AppLayout() {
               )}
             </button>
 
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm hidden sm:inline-flex"
               onClick={() => navigate('/profile')}
               style={{ padding: '0 12px' }}
             >
@@ -164,8 +164,17 @@ export function AppLayout() {
               {user.name.split(' ')[0]}
             </button>
 
-            <button 
-              className="btn btn-ghost btn-sm" 
+            <button
+              className="btn btn-ghost btn-sm sm:hidden"
+              onClick={() => navigate('/profile')}
+              style={{ padding: '0 8px', border: 'none' }}
+              aria-label="Profile"
+            >
+              <UserIcon size={18} />
+            </button>
+
+            <button
+              className="btn btn-ghost btn-sm"
               onClick={handleLogout}
               style={{ padding: '0 12px', border: 'none' }}
               title="Logout"
