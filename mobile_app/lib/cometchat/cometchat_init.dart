@@ -258,7 +258,19 @@ class CometChatInitializer {
   Future<CometChatInitResult> _loginWithRetry(DioClient dioClient) async {
     for (int attempt = 0; attempt < _maxRetries; attempt++) {
       try {
+        // Check if the user is already logged in (e.g. SDK persisted session).
+        // If so, skip the login step entirely — calling loginWithAuthToken
+        // again can cause the SDK to hang without firing any callback.
+        final alreadyLoggedIn = await CometChat.getLoggedInUser();
+        if (alreadyLoggedIn != null) {
+          // ignore: avoid_print
+          print('[CometChatInit] ✓ User already logged in: ${alreadyLoggedIn.uid}');
+          return const CometChatInitResult.success();
+        }
+
         // Fetch auth token from DeskLine backend
+        // ignore: avoid_print
+        print('[CometChatInit] → Fetching auth token from backend (attempt ${attempt + 1})...');
         final response = await dioClient.dio.post(
           ApiEndpoints.cometchatAuthToken,
         );
@@ -267,33 +279,58 @@ class CometChatInitializer {
         if (authToken == null || authToken.isEmpty) {
           throw Exception('Auth token not found in response');
         }
+        // ignore: avoid_print
+        print('[CometChatInit] → Auth token received, logging in to CometChat...');
 
         // Capture for Calls SDK login reuse
         _capturedAuthToken = authToken;
 
-        // Login to CometChat with the auth token
+        // Login to CometChat with the auth token.
+        // loginWithAuthToken is async internally (platform channel) — its
+        // onSuccess/onError may fire AFTER the outer await returns. We use
+        // a Completer with a 15 s timeout so a silent SDK hang doesn't block
+        // the initializer forever.
         final loginCompleter = Completer<void>();
         CometChatException? loginError;
 
         await CometChatUIKit.loginWithAuthToken(
           authToken,
-          onSuccess: (_) {
+          onSuccess: (user) {
+            // ignore: avoid_print
+            print('[CometChatInit] ✓ loginWithAuthToken onSuccess: ${user.uid}');
             if (!loginCompleter.isCompleted) loginCompleter.complete();
           },
           onError: (e) {
+            // ignore: avoid_print
+            print('[CometChatInit] ✗ loginWithAuthToken onError: ${e.message}');
             loginError = e;
             if (!loginCompleter.isCompleted) loginCompleter.complete();
           },
         );
 
-        await loginCompleter.future;
+        // Wait for the callback with a timeout so we never hang indefinitely.
+        await loginCompleter.future.timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            // ignore: avoid_print
+            print('[CometChatInit] ✗ loginWithAuthToken timed out after 15 s');
+            // Don't throw — fall through so the retry loop can retry.
+          },
+        );
+
+        if (loginCompleter.isCompleted && loginError == null) {
+          return const CometChatInitResult.success();
+        }
 
         if (loginError != null) {
           throw loginError!;
         }
 
-        return const CometChatInitResult.success();
+        // Timed out — retry
+        throw Exception('loginWithAuthToken timed out');
       } catch (e) {
+        // ignore: avoid_print
+        print('[CometChatInit] ✗ Login attempt ${attempt + 1} failed: $e');
         if (attempt < _maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s
           await Future.delayed(Duration(seconds: 1 << attempt));

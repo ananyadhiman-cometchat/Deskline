@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/theme_provider.dart';
 import '../../shared/enums/ticket_status.dart';
+import '../providers/cometchat_provider.dart';
 import 'call_buttons_widget.dart' show joinMeetingCall;
 
 /// Conversation type for the CometChat chat panel.
@@ -64,14 +65,37 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
   String? _error;
   User? _resolvedUser;
   Group? _resolvedGroup;
+  bool _chatInitTriggered = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeChat();
+    // _initializeChat() is triggered in two ways:
+    // 1. Via ref.listen in build() when cometchatProvider.isInitialized flips true.
+    // 2. Via addPostFrameCallback here — covers the case where isInitialized is
+    //    ALREADY true when the widget first mounts (e.g. user navigates to ticket
+    //    detail after CometChat has already logged in).
+    //
+    // We cannot read ref here (initState runs before the first build), so we
+    // schedule the check for after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // If CometChat is already initialized, kick off immediately.
+      // ref.read is safe here (after first build).
+      final state = ref.read(cometchatProvider);
+      if (state.isInitialized) {
+        _initializeChat();
+      }
+      // If not yet initialized, ref.listen in build() will fire when it becomes ready.
+    });
   }
 
   Future<void> _initializeChat() async {
+    if (_chatInitTriggered) return;
+    _chatInitTriggered = true;
+    // ignore: avoid_print
+    print('[ChatPanel] _initializeChat() started for group=${widget.groupId} uid=${widget.recipientUid}');
+
     try {
       final bool isGroup = widget.conversationType == ConversationType.group;
 
@@ -82,9 +106,13 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
         CometChat.getGroup(
           widget.groupId!,
           onSuccess: (Group group) {
+            // ignore: avoid_print
+            print('[ChatPanel] getGroup success: ${group.guid}');
             if (!completer.isCompleted) completer.complete(group);
           },
           onError: (CometChatException e) {
+            // ignore: avoid_print
+            print('[ChatPanel] getGroup error: ${e.message} — using fallback');
             // Fallback: construct a group with the GUID as the name
             if (!completer.isCompleted) {
               completer.complete(
@@ -93,7 +121,15 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
             }
           },
         );
-        _resolvedGroup = await completer.future;
+        // 10 s timeout — if SDK fires neither callback, fall back gracefully.
+        _resolvedGroup = await completer.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            // ignore: avoid_print
+            print('[ChatPanel] getGroup timed out — using fallback');
+            return Group(guid: widget.groupId!, name: widget.groupId!, type: 'private');
+          },
+        );
       } else if (!isGroup && widget.recipientUid != null) {
         // Fetch the real user for 1:1 conversations.
         final completer = Completer<User>();
@@ -103,6 +139,8 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
             if (!completer.isCompleted) completer.complete(user);
           },
           onError: (CometChatException e) {
+            // ignore: avoid_print
+            print('[ChatPanel] getUser error: ${e.message} — using fallback');
             if (!completer.isCompleted) {
               completer.complete(
                 User(uid: widget.recipientUid!, name: widget.recipientUid!),
@@ -110,11 +148,23 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
             }
           },
         );
-        _resolvedUser = await completer.future;
+        // 10 s timeout
+        _resolvedUser = await completer.future.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            // ignore: avoid_print
+            print('[ChatPanel] getUser timed out — using fallback');
+            return User(uid: widget.recipientUid!, name: widget.recipientUid!);
+          },
+        );
       }
 
+      // ignore: avoid_print
+      print('[ChatPanel] _initializeChat() complete. group=$_resolvedGroup user=$_resolvedUser');
       if (mounted) setState(() => _isLoading = false);
     } catch (e) {
+      // ignore: avoid_print
+      print('[ChatPanel] _initializeChat() error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -134,6 +184,16 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
     // CometChatThemeHelper.getBrightness() calls return the right value.
     final themeMode = ref.watch(themeModeProvider);
     CometChatThemeMode.mode = themeMode;
+
+    // React to CometChat becoming initialized AFTER the widget has already
+    // mounted (covers the async case where login completes mid-lifecycle).
+    // ref.listen fires on every state CHANGE — if CometChat was already
+    // initialized when we mounted, initState's postFrameCallback handles it.
+    ref.listen<CometChatState>(cometchatProvider, (previous, next) {
+      if (next.isInitialized && !_chatInitTriggered) {
+        _initializeChat();
+      }
+    });
 
     if (_isLoading) return _buildLoadingState();
     if (_error != null) return _buildErrorState();
