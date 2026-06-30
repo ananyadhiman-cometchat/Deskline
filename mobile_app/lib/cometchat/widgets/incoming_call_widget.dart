@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/material.dart';
@@ -349,6 +351,14 @@ class _AcceptedCallScreenState extends State<_AcceptedCallScreen> {
     // are present but permission has not been granted yet.
     final micStatus = await Permission.microphone.request();
     final camStatus = await Permission.camera.request();
+
+    // Android 12+ (API 31+) requires BLUETOOTH_CONNECT at runtime so WebRTC
+    // can route audio through Bluetooth headsets/earphones. Physical devices
+    // crash with a SecurityException if this is skipped — emulators never
+    // hit it because they have no Bluetooth hardware.
+    if (Platform.isAndroid) {
+      await Permission.bluetoothConnect.request();
+    }
 
     if (micStatus.isDenied || camStatus.isDenied) {
       if (mounted) {

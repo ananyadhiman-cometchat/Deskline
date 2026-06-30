@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <!-- Required on Android 12+ (API 31+) for WebRTC to route audio to Bluetooth
+         headsets/earphones. Without this, the native audio layer throws a
+         SecurityException on physical devices (not emulators) and crashes the app. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        android:maxSdkVersion="99"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        android:maxSdkVersion="99"/>
     <application
         android:label="deskline"
         android:name="${applicationName}"
