@@ -1,5 +1,9 @@
 node_modules
 
+# macOS Finder metadata — never commit these
+.DS_Store
+**/.DS_Store
+
 # Firebase config files (contain API keys)
 **/google-services.json
 **/GoogleService-Info.plist
