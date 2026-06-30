@@ -120,18 +120,18 @@ class CometChatInitializer {
   /// Calls SDK login (so we don't fetch a second token).
   String? _capturedAuthToken;
 
-  /// Initialize and login the v5 Calls SDK so voice/video calling works.
+  /// Login the v5 Calls SDK so voice/video calling works.
   ///
-  /// Mirrors the web's [initCallsWithRetry] pattern: exponential backoff with
-  /// up to [_maxRetries] attempts (1 s, 2 s, 4 s delays). Non-fatal — chat
-  /// features remain functional even if calls init fails.
+  /// CometChatCalls.init() is called once at app startup in main.dart.
+  /// This method only handles the login step (fetching + using the auth token)
+  /// so we never double-init the native WebRTC engine — doing so crashes on
+  /// physical Android/iOS hardware (emulators are more forgiving).
   Future<void> _initCallsSdk() async {
     try {
-      await _initCallsSdkWithRetry();
       await _loginCallsSdkWithRetry();
     } catch (e) {
       // ignore: avoid_print
-      print('[CometChat] Calls SDK init/login failed: $e');
+      print('[CometChat] Calls SDK login failed: $e');
     }
   }
 
