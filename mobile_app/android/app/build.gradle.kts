@@ -27,16 +27,28 @@ android {
         versionName = flutter.versionName
     }
 
+    packaging {
+        jniLibs {
+            pickFirsts += listOf(
+                "lib/x86/libc++_shared.so",
+                "lib/x86_64/libc++_shared.so",
+                "lib/armeabi-v7a/libc++_shared.so",
+                "lib/arm64-v8a/libc++_shared.so",
+                "lib/x86/libfbjni.so",
+                "lib/x86_64/libfbjni.so",
+                "lib/armeabi-v7a/libfbjni.so",
+                "lib/arm64-v8a/libfbjni.so"
+            )
+        }
+    }
+
     buildTypes {
         release {
             // Signing with debug keys for now (works for local device testing).
             // Replace with a proper keystore before Play Store submission.
             signingConfig = signingConfigs.getByName("debug")
-
-            // R8 minification — keeps dead-code removal while applying our
-            // proguard-rules.pro to prevent CometChat/Firebase class stripping.
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -68,4 +80,18 @@ configurations.all {
     exclude(group = "com.android.support")
     exclude(group = "android.arch.lifecycle")
     exclude(group = "android.arch.core")
+    
+    // Pin React Native to 0.77.2 — the EXACT version the CometChat Calls SDK
+    // 5.0.1 declares in its POM (react-android + hermes-android both 0.77.2),
+    // and the version its bundled modules (react-native-svg 15.11.2, webrtc 124)
+    // were compiled against. They must all match the core or class loading fails
+    // at call time (NoClassDefFoundError: com.horcrux.svg.SvgPackage).
+    //
+    // Do NOT downgrade to 0.73.x: RN 0.77 merged all native libs into a single
+    // libreactnative.so, so the separate libreact_*jni.so files no longer exist —
+    // mixing a 0.73 core with 0.77 modules breaks both class linking and JNI.
+    resolutionStrategy {
+        force("com.facebook.react:react-android:0.77.2")
+        force("com.facebook.react:hermes-android:0.77.2")
+    }
 }

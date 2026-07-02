@@ -254,18 +254,98 @@ class CometChatInitializer {
     );
   }
 
+  /// Whether an error indicates the persisted auth token is no longer valid
+  /// on the server (e.g. the user was deleted/recreated or tokens were
+  /// rotated), meaning the local session must be recreated from scratch.
+  static bool _isStaleTokenError(Object? e) {
+    if (e is CometChatException) {
+      if (e.code == 'AUTH_ERR_AUTH_TOKEN_NOT_FOUND') return true;
+      final msg = e.message?.toLowerCase() ?? '';
+      return msg.contains('auth token') && msg.contains('does not exist');
+    }
+    final s = e.toString().toLowerCase();
+    return s.contains('auth_err_auth_token_not_found') ||
+        (s.contains('auth token') && s.contains('does not exist'));
+  }
+
+  /// Validate a persisted session with a single authenticated server call.
+  ///
+  /// Returns true if the session/token is still accepted by the server, false
+  /// if the server rejects it as stale. On any *other* error (network/offline)
+  /// we optimistically return true so an offline launch keeps working with the
+  /// cached session instead of needlessly logging the user out.
+  Future<bool> _isPersistedSessionValid(String uid) async {
+    final completer = Completer<bool>();
+    await CometChat.getUser(
+      uid,
+      onSuccess: (_) {
+        if (!completer.isCompleted) completer.complete(true);
+      },
+      onError: (e) {
+        // Stale token -> invalid. Anything else (e.g. offline) -> assume valid.
+        if (!completer.isCompleted) completer.complete(!_isStaleTokenError(e));
+      },
+    );
+    return completer.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => true,
+    );
+  }
+
+  /// Clear the persisted CometChat session so the next login starts clean.
+  /// Best-effort: never throws, so callers can always fall through to a fresh
+  /// login afterwards.
+  Future<void> _forceLogout() async {
+    try {
+      final completer = Completer<void>();
+      await CometChat.logout(
+        onSuccess: (_) {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (_) {
+          if (!completer.isCompleted) completer.complete();
+        },
+      );
+      await completer.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {},
+      );
+    } catch (_) {
+      // Ignore — a failed logout shouldn't block a re-login attempt.
+    }
+    _capturedAuthToken = null;
+  }
+
   /// Fetch auth token from backend and login to CometChat with retry.
   Future<CometChatInitResult> _loginWithRetry(DioClient dioClient) async {
     for (int attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         // Check if the user is already logged in (e.g. SDK persisted session).
-        // If so, skip the login step entirely — calling loginWithAuthToken
-        // again can cause the SDK to hang without firing any callback.
+        // If so, skip the login step — calling loginWithAuthToken again can
+        // cause the SDK to hang without firing any callback.
+        //
+        // BUT: CometChat persists the session locally (iOS keeps the auth
+        // token in the Keychain, which survives app reinstalls), so a token
+        // from an earlier install/login can linger after it has been
+        // invalidated server-side. Trusting it blindly makes init report
+        // "success" while the socket later fails with
+        // AUTH_ERR_AUTH_TOKEN_NOT_FOUND. So we validate the persisted session
+        // against the server before trusting it, and log out + re-login fresh
+        // if the token is stale.
         final alreadyLoggedIn = await CometChat.getLoggedInUser();
         if (alreadyLoggedIn != null) {
+          final sessionValid =
+              await _isPersistedSessionValid(alreadyLoggedIn.uid);
+          if (sessionValid) {
+            // ignore: avoid_print
+            print('[CometChatInit] ✓ User already logged in: ${alreadyLoggedIn.uid}');
+            return const CometChatInitResult.success();
+          }
+          // Stale persisted session — clear it, then fall through to a fresh
+          // token fetch + login below.
           // ignore: avoid_print
-          print('[CometChatInit] ✓ User already logged in: ${alreadyLoggedIn.uid}');
-          return const CometChatInitResult.success();
+          print('[CometChatInit] ⚠ Stale session for ${alreadyLoggedIn.uid}; logging out to re-auth');
+          await _forceLogout();
         }
 
         // Fetch auth token from DeskLine backend
@@ -331,6 +411,13 @@ class CometChatInitializer {
       } catch (e) {
         // ignore: avoid_print
         print('[CometChatInit] ✗ Login attempt ${attempt + 1} failed: $e');
+        // If a stale/invalid token caused the failure, clear the persisted
+        // session so the next attempt fetches and logs in with a fresh one.
+        if (_isStaleTokenError(e)) {
+          // ignore: avoid_print
+          print('[CometChatInit] ⚠ Stale auth token; logging out before retry');
+          await _forceLogout();
+        }
         if (attempt < _maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s
           await Future.delayed(Duration(seconds: 1 << attempt));

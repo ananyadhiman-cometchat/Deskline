@@ -50,6 +50,32 @@
 -keep class org.webrtc.** { *; }
 -dontwarn org.webrtc.**
 
+# ─── React Native runtime (embedded by the CometChat Calls SDK call view) ─────
+# CometChat's call screen is rendered with an embedded React Native runtime.
+# At call time, com.cometchat.calls.modules.ReactInstanceManagerHolder loads its
+# native modules REFLECTIVELY via getReactNativePackages(). R8 can't see those
+# reflective references, so on minified release builds it strips the classes and
+# the call view crashes the app with NoClassDefFoundError / ClassNotFoundException
+# (e.g. com.horcrux.svg.SvgPackage, com.facebook.react.soloader.OpenSourceMergedSoMapping).
+# Emulator/debug builds aren't minified, which is why this only crashed on the
+# installed release APK on a physical device. Keep every RN package the SDK bundles.
+-keep class com.facebook.** { *; }
+-dontwarn com.facebook.**
+-keep class com.horcrux.svg.** { *; }
+-keep class com.oney.WebRTCModule.** { *; }
+-keep class com.ocetnik.timer.** { *; }
+-keep class com.oblador.performance.** { *; }
+-keep class com.reactnativecommunity.asyncstorage.** { *; }
+
+# React Native bridges native modules by name/annotation — these must survive R8.
+-keep @com.facebook.proguard.annotations.DoNotStrip class * { *; }
+-keepclassmembers class * { @com.facebook.proguard.annotations.DoNotStrip *; }
+-keepclassmembers class * { @com.facebook.react.bridge.ReactMethod *; }
+-keep class * extends com.facebook.react.bridge.NativeModule { *; }
+-keep class * extends com.facebook.react.bridge.JavaScriptModule { *; }
+-keep class * extends com.facebook.react.ReactPackage { *; }
+-keepclassmembers class * extends com.facebook.react.bridge.ReactContextBaseJavaModule { *; }
+
 # ─── Keep Parcelable / Serializable models ────────────────────────────────────
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator *;
@@ -62,3 +88,29 @@
     java.lang.Object writeReplace();
     java.lang.Object readResolve();
 }
+
+# ─── React Native & CometChat Community Plugins ───────────────────────────────
+# CometChat Calls SDK is kept above, which prevents its classes from being renamed.
+# However, it explicitly references React Native and its community plugins.
+# If these aren't kept, R8 renames them, causing NoClassDefFoundErrors at runtime
+# when CometChat tries to instantiate them by their original un-renamed names.
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.yoga.** { *; }
+-keep class com.facebook.soloader.** { *; }
+-dontwarn com.facebook.react.**
+
+-keep class com.horcrux.svg.** { *; }
+-dontwarn com.horcrux.svg.**
+
+-keep class com.oney.WebRTCModule.** { *; }
+-dontwarn com.oney.WebRTCModule.**
+
+-keep class com.reactnativecommunity.asyncstorage.** { *; }
+-dontwarn com.reactnativecommunity.asyncstorage.**
+
+-keep class com.ocetnik.timer.** { *; }
+-dontwarn com.ocetnik.timer.**
+
+-keep class com.oblador.performance.** { *; }
+-dontwarn com.oblador.performance.**
+
