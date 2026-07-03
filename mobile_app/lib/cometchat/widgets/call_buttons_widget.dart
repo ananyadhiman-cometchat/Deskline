@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/theme/color_scheme.dart';
 import '../cometchat_config.dart';
+import '../cometchat_init.dart';
 
 /// Public function to join a meeting call from anywhere in the app
 /// (e.g., tapping "Join" on a meeting message card).
@@ -316,6 +317,16 @@ class _OngoingCallScreenState extends State<_OngoingCallScreen>
 
   /// Login the v5 Calls SDK if not already logged in.
   Future<void> _ensureCallsSdkReady() async {
+    // Lazily guarantee the native Calls SDK is initialized before any
+    // CometChatCalls.* operation. On iOS the plugin channels register a
+    // run-loop turn late (see AppDelegate), so the login-time init may not have
+    // run — without this, getLoggedInUser/joinSession throw "call init first".
+    try {
+      await CometChatInitializer.instance.ensureCallsSdkInitialized();
+    } catch (e) {
+      debugPrint('[OngoingCall] Calls SDK init failed: $e');
+    }
+
     try {
       final loggedInUser = CometChatCalls.getLoggedInUser();
       if (loggedInUser != null) {

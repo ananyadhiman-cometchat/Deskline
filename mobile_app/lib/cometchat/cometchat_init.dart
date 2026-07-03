@@ -49,7 +49,14 @@ class CometChatInitializer {
   /// the same Future.
   ///
   /// [dioClient] is used to fetch the auth token from the DeskLine backend.
-  Future<CometChatInitResult> initialize(DioClient dioClient) async {
+  /// [expectedUid] is the CometChat UID of the DeskLine user currently signing
+  /// in (their DeskLine user id). It is used to detect and discard a persisted
+  /// session that belongs to a *different* user (e.g. after logging out as one
+  /// role and back in as another).
+  Future<CometChatInitResult> initialize(
+    DioClient dioClient, {
+    String? expectedUid,
+  }) async {
     // If already in progress or completed, return existing future
     if (_initCompleter != null) {
       return _initCompleter!.future;
@@ -58,7 +65,7 @@ class CometChatInitializer {
     _initCompleter = Completer<CometChatInitResult>();
 
     try {
-      final result = await _performInitialization(dioClient);
+      final result = await _performInitialization(dioClient, expectedUid);
       _isReady = result.isInitialized;
       _initCompleter!.complete(result);
     } catch (e) {
@@ -75,9 +82,20 @@ class CometChatInitializer {
     _isReady = false;
   }
 
+  /// Fully log out of CometChat on user logout: tear down the persisted SDK
+  /// session (so the next user doesn't inherit this identity) and reset the
+  /// initializer so the next login runs a clean init + login.
+  ///
+  /// Best-effort — never throws.
+  Future<void> logout() async {
+    await _forceLogout();
+    reset();
+  }
+
   /// Performs SDK init + login with retry and exponential backoff.
   Future<CometChatInitResult> _performInitialization(
     DioClient dioClient,
+    String? expectedUid,
   ) async {
     if (!CometChatConfig.isConfigured) {
       return const CometChatInitResult.failure(
@@ -98,7 +116,7 @@ class CometChatInitializer {
 
     // Step 2: Fetch auth token from backend and login with retry.
     // The auth token is captured so the Calls SDK can reuse it.
-    final loginResult = await _loginWithRetry(dioClient);
+    final loginResult = await _loginWithRetry(dioClient, expectedUid);
     if (!loginResult.isInitialized) {
       // ignore: avoid_print
       print('[CometChatInit] ✗ Login failed: ${loginResult.error}');
@@ -120,19 +138,52 @@ class CometChatInitializer {
   /// Calls SDK login (so we don't fetch a second token).
   String? _capturedAuthToken;
 
-  /// Login the v5 Calls SDK so voice/video calling works.
+  /// Whether the native Calls SDK (WebRTC engine) is currently initialized.
+  /// Guards against a double CometChatCalls.init() (init while still
+  /// initialized), which crashes on physical iOS/Android hardware.
   ///
-  /// CometChatCalls.init() is called once at app startup in main.dart.
-  /// This method only handles the login step (fetching + using the auth token)
-  /// so we never double-init the native WebRTC engine — doing so crashes on
-  /// physical Android/iOS hardware (emulators are more forgiving).
+  /// Reset to false in [_forceLogout] because CometChat.logout() tears the
+  /// Calls SDK down — so the next login must re-init it. It tracks the SDK's
+  /// real state, not "did we ever init once".
+  static bool _callsSdkInitialized = false;
+
+  /// Initialize and login the v5 Calls SDK so voice/video calling works.
+  ///
+  /// The Calls SDK requires the core CometChat SDK to already be initialized —
+  /// otherwise iOS throws "Please call the CometChat.init() method" when a call
+  /// starts. This runs AFTER [_initSdkWithRetry] (core init) inside
+  /// [_performInitialization], guaranteeing the correct order. It is NOT done
+  /// at app startup in main.dart, where core init hasn't happened yet.
+  ///
+  /// The init step is guarded by [_callsSdkInitialized] so the native WebRTC
+  /// engine is only initialized once, even though this method re-runs on every
+  /// re-login (double-init crashes on physical hardware).
   Future<void> _initCallsSdk() async {
     try {
+      await ensureCallsSdkInitialized();
       await _loginCallsSdkWithRetry();
     } catch (e) {
       // ignore: avoid_print
-      print('[CometChat] Calls SDK login failed: $e');
+      print('[CometChat] Calls SDK init/login failed: $e');
     }
+  }
+
+  /// Ensure the native Calls SDK (WebRTC engine) is initialized exactly once.
+  ///
+  /// Safe to call from the call-start paths as a lazy safety net: if the
+  /// login-time [_initCallsSdk] didn't run (e.g. init flow timing on iOS, where
+  /// plugin channels register a run-loop turn late), this guarantees
+  /// CometChatCalls.init() has run before joinSession/loginWithAuthToken, so a
+  /// call never hits "Please call the CometChatCalls.init() method".
+  ///
+  /// Requires the core CometChat SDK to already be initialized — true once the
+  /// user is logged in, which is always the case before a call can start.
+  Future<void> ensureCallsSdkInitialized() async {
+    if (_callsSdkInitialized) return;
+    await _initCallsSdkWithRetry();
+    _callsSdkInitialized = true;
+    // ignore: avoid_print
+    print('[CometChatInit] ✓ Calls SDK initialized (lazy)');
   }
 
   /// Init the Calls SDK with exponential backoff, matching the web's
@@ -314,38 +365,62 @@ class CometChatInitializer {
       // Ignore — a failed logout shouldn't block a re-login attempt.
     }
     _capturedAuthToken = null;
+    // CometChat.logout() also tears down the native Calls SDK, so its previous
+    // init is no longer valid. Clear the guard so the next login re-runs
+    // CometChatCalls.init() via [ensureCallsSdkInitialized]. This is a
+    // legitimate single init of a torn-down SDK — NOT the double-init (init
+    // while still initialized) that crashes iOS. Without this reset, the flag
+    // would wrongly report the SDK as ready and calls would fail with
+    // "Please call the CometChatCalls.init() method" after the first logout.
+    _callsSdkInitialized = false;
   }
 
   /// Fetch auth token from backend and login to CometChat with retry.
-  Future<CometChatInitResult> _loginWithRetry(DioClient dioClient) async {
+  Future<CometChatInitResult> _loginWithRetry(
+    DioClient dioClient,
+    String? expectedUid,
+  ) async {
     for (int attempt = 0; attempt < _maxRetries; attempt++) {
       try {
         // Check if the user is already logged in (e.g. SDK persisted session).
         // If so, skip the login step — calling loginWithAuthToken again can
         // cause the SDK to hang without firing any callback.
         //
-        // BUT: CometChat persists the session locally (iOS keeps the auth
-        // token in the Keychain, which survives app reinstalls), so a token
-        // from an earlier install/login can linger after it has been
-        // invalidated server-side. Trusting it blindly makes init report
-        // "success" while the socket later fails with
-        // AUTH_ERR_AUTH_TOKEN_NOT_FOUND. So we validate the persisted session
-        // against the server before trusting it, and log out + re-login fresh
-        // if the token is stale.
+        // BUT two things can make a persisted session wrong:
+        //  1. It may belong to a DIFFERENT DeskLine user — e.g. the previous
+        //     user logged out and someone signed in with another account.
+        //     CometChat persists its session natively (iOS Keychain, Android
+        //     EncryptedSharedPreferences) and DeskLine logout doesn't always
+        //     clear it (uninstall/crash), so the old identity can linger and
+        //     make chat/calls act as the wrong user. The backend always uses
+        //     the DeskLine user id as the CometChat UID, so we compare the
+        //     persisted uid against [expectedUid] and re-auth on mismatch.
+        //  2. The token may have been invalidated server-side (user deleted/
+        //     recreated, tokens rotated). Trusting it blindly makes init report
+        //     "success" while the socket later fails with
+        //     AUTH_ERR_AUTH_TOKEN_NOT_FOUND. So we also validate the session
+        //     against the server before trusting it.
+        // In either case we log out + re-login fresh below.
         final alreadyLoggedIn = await CometChat.getLoggedInUser();
         if (alreadyLoggedIn != null) {
-          final sessionValid =
-              await _isPersistedSessionValid(alreadyLoggedIn.uid);
-          if (sessionValid) {
+          if (expectedUid != null && alreadyLoggedIn.uid != expectedUid) {
             // ignore: avoid_print
-            print('[CometChatInit] ✓ User already logged in: ${alreadyLoggedIn.uid}');
-            return const CometChatInitResult.success();
+            print('[CometChatInit] ⚠ Persisted session ${alreadyLoggedIn.uid} != current user $expectedUid; logging out to re-auth');
+            await _forceLogout();
+          } else {
+            final sessionValid =
+                await _isPersistedSessionValid(alreadyLoggedIn.uid);
+            if (sessionValid) {
+              // ignore: avoid_print
+              print('[CometChatInit] ✓ User already logged in: ${alreadyLoggedIn.uid}');
+              return const CometChatInitResult.success();
+            }
+            // Stale persisted session — clear it, then fall through to a fresh
+            // token fetch + login below.
+            // ignore: avoid_print
+            print('[CometChatInit] ⚠ Stale session for ${alreadyLoggedIn.uid}; logging out to re-auth');
+            await _forceLogout();
           }
-          // Stale persisted session — clear it, then fall through to a fresh
-          // token fetch + login below.
-          // ignore: avoid_print
-          print('[CometChatInit] ⚠ Stale session for ${alreadyLoggedIn.uid}; logging out to re-auth');
-          await _forceLogout();
         }
 
         // Fetch auth token from DeskLine backend

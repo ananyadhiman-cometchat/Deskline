@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/networking/dio_provider.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../cometchat_init.dart';
 import '../services/cometchat_push_service.dart';
 
@@ -54,7 +55,12 @@ class CometChatNotifier extends StateNotifier<CometChatState> {
     state = state.copyWith(isLoading: true, error: null);
 
     final dioClient = _ref.read(dioClientProvider);
-    final result = await CometChatInitializer.instance.initialize(dioClient);
+    // The CometChat UID is the DeskLine user id (see backend cometchat-auth
+    // service). Passing it lets init discard a persisted session belonging to
+    // a previously logged-in user.
+    final expectedUid = _ref.read(authStateProvider).user?.id;
+    final result = await CometChatInitializer.instance
+        .initialize(dioClient, expectedUid: expectedUid);
 
     if (result.isInitialized) {
       state = const CometChatState(isInitialized: true);
@@ -68,9 +74,19 @@ class CometChatNotifier extends StateNotifier<CometChatState> {
     }
   }
 
-  /// Reset the CometChat state (e.g. on logout).
-  void reset() {
-    CometChatInitializer.instance.reset();
+  /// Tear down the CometChat session on logout.
+  ///
+  /// Unregisters this device's push token (so the logged-out user stops
+  /// receiving chat/call notifications), logs out of the CometChat SDK to
+  /// clear the natively-persisted session, and resets the provider state so
+  /// the next user runs a clean initialize + login.
+  Future<void> reset() async {
+    try {
+      await CometChatPushService.unregisterToken();
+    } catch (_) {
+      // Best-effort — never block logout on push cleanup.
+    }
+    await CometChatInitializer.instance.logout();
     state = const CometChatState();
   }
 }

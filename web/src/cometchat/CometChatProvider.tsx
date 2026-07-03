@@ -6,6 +6,7 @@ import { formatCometChatError, logCometChatError } from "./errors";
 import { registerCometChatPushToken } from "./pushNotifications";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/store/uiStore";
+import { useAuthStore } from "@/store/authStore";
 
 // ============================================================
 // CometChatProvider — Init + Login + Calls SDK gate
@@ -105,14 +106,35 @@ async function initCallsWithRetry(): Promise<void> {
  * Guard concurrent login calls. React StrictMode double-mounts cause
  * two login() calls to overlap — the SDK rejects concurrent logins.
  * This caches the in-flight promise so the second caller just awaits it.
+ *
+ * `expectedUid` is the DeskLine user id of the account that just logged in
+ * (CometChat UIDs === DeskLine user ids). Because this is a single-page app,
+ * the CometChat SDK session survives DeskLine logout/login. If we don't verify
+ * identity here, a previous user's stale session (e.g. "employee 1") short-
+ * circuits the early-return and the new user (agent/admin) is never logged in —
+ * so the app keeps showing the previous user's chats and calls.
  */
-async function ensureLoggedIn(authToken: string): Promise<void> {
+async function ensureLoggedIn(
+  authToken: string,
+  expectedUid: string
+): Promise<void> {
   const existing = await CometChatUIKit.getLoggedinUser();
-  if (existing) return;
+
+  // Already logged in as the correct user — nothing to do.
+  if (existing && existing.getUid() === expectedUid) return;
+
+  // A different user's session is still active (SPA logout/login, or a
+  // swallowed logout error). Tear it down before logging in the new user.
+  if (existing && existing.getUid() !== expectedUid) {
+    await CometChatUIKit.logout().catch(() => {});
+    loginInFlight = null;
+  }
 
   if (loginInFlight) {
     await loginInFlight;
-    return;
+    // The in-flight login may have been for the previous user; re-verify.
+    const after = await CometChatUIKit.getLoggedinUser();
+    if (after && after.getUid() === expectedUid) return;
   }
 
   loginInFlight = CometChatUIKit.loginWithAuthToken(authToken);
@@ -164,9 +186,23 @@ interface CometChatProviderProps {
 export function CometChatProvider({ children }: CometChatProviderProps) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // CometChat UID === DeskLine user id. Drive (re)login off the current user
+  // so switching accounts re-authenticates instead of reusing a stale session.
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   useEffect(() => {
     let cancelled = false;
+
+    // No authenticated DeskLine user yet — don't attempt a CometChat login.
+    if (!currentUserId) {
+      setIsReady(false);
+      return;
+    }
+
+    // Account (re)switch: close the children gate until the new user's
+    // CometChat session is fully established, so no stale data is shown.
+    setIsReady(false);
+    setError(null);
 
     async function setup() {
       try {
@@ -176,9 +212,9 @@ export function CometChatProvider({ children }: CometChatProviderProps) {
           await initWithRetry();
         }
 
-        // 2. Fetch auth token from backend and login
+        // 2. Fetch auth token from backend and login as the current user
         const authToken = await fetchAuthToken();
-        await ensureLoggedIn(authToken);
+        await ensureLoggedIn(authToken, currentUserId!);
 
         // 3. Init Calls SDK v5 (with retry + exponential backoff)
         await initCallsWithRetry();
@@ -286,7 +322,7 @@ export function CometChatProvider({ children }: CometChatProviderProps) {
         CometChat.removeMessageListener("GLOBAL_MESSAGE_TOAST_LISTENER");
       }).catch(() => {});
     };
-  }, []);
+  }, [currentUserId]);
 
   if (error) {
     return (

@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,32 +19,14 @@ Future<void> main() async {
     debugPrint('✗ Firebase init failed: $e');
   }
 
-  // Initialize CometChat Calls SDK at app startup (like the official sample).
-  // This MUST happen early so that joinSession works when the user taps "Join".
-  try {
-    final callAppSettings = (CallAppSettingBuilder()
-          ..appId = '16802226f2533cd8a'
-          ..region = 'in')
-        .build();
+  // NOTE: The CometChat Calls SDK is intentionally NOT initialized here.
+  // CometChatCalls.init() requires the core CometChat SDK (CometChat.init via
+  // CometChatUIKit.init) to be initialized first — which only happens after
+  // login. Initializing calls here (before core init) makes iOS throw
+  // "Please call the CometChat.init() method" when a call starts. Calls init
+  // now runs in CometChatInitializer._initCallsSdk(), after core init.
 
-    final completer = Completer<void>();
-    CometChatCalls.init(
-      callAppSettings,
-      onSuccess: (_) {
-        debugPrint('✓ CometChat Calls SDK initialized');
-        if (!completer.isCompleted) completer.complete();
-      },
-      onError: (CometChatCallsException e) {
-        debugPrint('✗ CometChat Calls SDK init failed: ${e.message}');
-        if (!completer.isCompleted) completer.complete();
-      },
-    );
-    await completer.future;
-  } catch (e) {
-    debugPrint('✗ CometChat Calls SDK init exception: $e');
-  }
-
-  // Then set up push notification listeners (requires Firebase).
+  // Set up push notification listeners (requires Firebase).
   // Wrapped with a timeout: if flutter_local_notifications or any SDK
   // requests an OS permission dialog that never resolves, runApp() would
   // be permanently blocked and the user would see a white screen.

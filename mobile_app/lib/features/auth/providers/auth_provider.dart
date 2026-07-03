@@ -6,6 +6,7 @@ import '../../../shared/models/models.dart';
 import '../../../shared/services/secure_storage_provider.dart';
 import '../../../shared/services/secure_storage_service.dart';
 import '../../../shared/services/environment_provider.dart';
+import '../../../cometchat/providers/cometchat_provider.dart';
 import '../../notifications/services/push_notification_service.dart';
 import '../data/auth_api_service.dart';
 import '../data/auth_repository.dart';
@@ -31,6 +32,7 @@ final authStateProvider =
     ref.watch(authRepositoryProvider),
     ref.watch(secureStorageProvider),
     dioClient,
+    ref,
   );
 });
 
@@ -68,9 +70,14 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SecureStorageService _secureStorage;
   final DioClient _dioClient;
+  final Ref _ref;
 
-  AuthStateNotifier(this._repository, this._secureStorage, this._dioClient)
-      : super(const AuthState()) {
+  AuthStateNotifier(
+    this._repository,
+    this._secureStorage,
+    this._dioClient,
+    this._ref,
+  ) : super(const AuthState()) {
     _initialize();
   }
 
@@ -150,6 +157,14 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       await _repository.logout();
     } catch (_) {
       // Even if server logout fails, proceed with local cleanup
+    }
+    // Tear down the CometChat session too. Without this the CometChat SDK
+    // keeps this user's natively-persisted session, so the next user who logs
+    // in on this device inherits their chat/call identity.
+    try {
+      await _ref.read(cometchatProvider.notifier).reset();
+    } catch (_) {
+      // Best-effort — never block logout on chat cleanup.
     }
     await _secureStorage.clearAll();
     state = const AuthState(isInitialized: true);
