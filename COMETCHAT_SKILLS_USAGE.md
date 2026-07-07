@@ -1,104 +1,110 @@
 # CometChat Skills Usage — DeskLine (Step 2)
 
-> **Status:** Step 2 documentation. This records **how CometChat Skills** (the AI-assisted CometChat integration skills / tooling) were used to build the DeskLine ↔ CometChat integration on the `cometchat-integration` branch. The goal is to show that the Skills were understood and used effectively — not merely that the integration compiled.
+> How **CometChat Skills** were used to build the DeskLine ↔ CometChat integration on the **`cometchat-integration`** branch. The goal is to show the Skills were understood and used effectively — not merely that the integration compiled. Documented on `main` for full coverage.
 
 ---
 
-## What "CometChat Skills" are here
+## Which Skills were used
 
-CometChat Skills are the AI-assisted, task-scoped capabilities used to scaffold and wire CometChat into an existing app — user sync, SDK/UI-Kit setup, tags & RBAC, moderation, webhooks, and push. Each skill takes the existing codebase as context and generates or improves the integration code, which is then reviewed and adapted by hand.
+The project pins CometChat Skills in **`skills-lock.json`** (hash-verified, sourced from the `cometchat/cometchat-skills` GitHub repo). Four skills were locked and used:
 
-This document follows the assignment's required outline: **which skills, what each helped with, prompts/workflows, problems solved, code areas touched, limitations/manual changes, learnings, and before/after examples.**
+| Skill | What it covers |
+|---|---|
+| **`cometchat`** | Core integration — SDK/UI Kit setup, user management, auth tokens, groups, messaging, webhooks, moderation |
+| **`cometchat-calls`** | Voice & video calling — Calls SDK init and call UI |
+| **`cometchat-a11y`** | Accessibility of the chat UI |
+| **`cometchat-i18n`** | Internationalization of chat surfaces |
+
+Because they're pinned in `skills-lock.json` with a computed hash, the exact skill revision used during development is reproducible.
+
+This document follows the assignment's required outline: **which skills, what each helped with, prompts/workflows, problems solved, code areas, limitations/manual changes, learnings, before/after.**
 
 ---
 
-## Skills used and what each helped with
+## What each skill helped with
 
-| Skill / task area | Helped with | Code areas generated or improved |
+| Area | Skill(s) | Code produced / improved |
 |---|---|---|
-| **SDK & UI Kit setup (web)** | Installing `@cometchat/chat-sdk-javascript` + React UI Kit v5, initialising with App ID + Region, mounting chat on the ticket page | `web/src/lib/cometchat.ts`, ticket-detail chat panel (replacing `ChatPlaceholder.tsx`) |
-| **SDK & UI Kit setup (mobile)** | Flutter Chat SDK + UI Kit init, wiring into the ticket screen | `mobile_app/lib/features/chat/*` |
-| **Server-side auth token** | Generating a per-user CometChat auth token without exposing the Auth Key | `backend` `POST /api/cometchat/auth-token` + a CometChat service module |
-| **User sync** | Bulk-syncing the 105 seeded users and creating CometChat users on registration; UID = app id | seed/sync script + hook in the auth `register` flow |
-| **Tags & RBAC** | Applying `role:*` / `dept:*` tags and expressing who-can-message-whom | user-sync tagging + conversation-start guards |
-| **1:1 → group migration** | Adding the supervisor to an existing conversation on escalation, preserving history | escalation handler |
-| **Moderation** | Enabling AI Moderation and surfacing flagged messages to admins | `GET /api/admin/moderation`, `POST /api/admin/moderation/:id/action`, admin queue UI |
-| **Webhooks** | The `/webhooks/cometchat` endpoint, signature verification, and event handlers | webhook route + `webhook_event_logs` handlers |
-| **Push notifications** | CometChat push coexisting with the existing FCM funnel | push registration reuse |
+| Server-side auth token endpoint | `cometchat` | `backend/src/modules/cometchat/cometchat-auth.service.ts`, `cometchat.controller.ts`, `cometchat.route.ts` → `POST /api/cometchat/auth-token` |
+| REST client (v3) | `cometchat` | `cometchat-client.ts` (`https://{appId}.api-{region}.cometchat.io/v3`, `CometChatApiError`) |
+| User sync + tags | `cometchat` | `cometchat-sync.service.ts` (`syncNewUser`, `batchSyncUsers`, retry/backoff, 409→update) |
+| Group chat model | `cometchat` | `cometchat-chat.service.ts` (`createTicketConversation`, `createEscalationGroup`, `addMemberToTicketGroup`) |
+| Conversation lifecycle | `cometchat` | `cometchat-lifecycle.service.ts` (`onTicketStatusChange`, end/reactivate) |
+| AI agent | `cometchat` | `cometchat-ai.service.ts` (AI-agent user, greeting, human handoff preserving history) |
+| Moderation queue | `cometchat` | `cometchat-moderation.service.ts` + `cometchat-moderation.route.ts` |
+| Webhooks | `cometchat` | `cometchat-webhook.service.ts` + `cometchat-webhook.route.ts` (`/webhooks/cometchat`) |
+| Web SDK/UI Kit + provider | `cometchat`, `cometchat-a11y`, `cometchat-i18n` | `web/src/cometchat/CometChatProvider.tsx`, `TicketChatSection`, `AgentInbox`, `ModerationQueue` |
+| Calling | `cometchat-calls` | `web/src/cometchat/components/CallButtons.tsx`, `hooks/useCometChatCall.ts`, Calls SDK init |
+| Mobile SDK/UI Kit | `cometchat`, `cometchat-calls` | `mobile_app/lib/cometchat/*` |
 
 ---
 
 ## Prompts / workflows used
 
-Representative prompts driven through the Skills (paraphrased), each grounded in the existing DeskLine code:
+Representative prompts driven through the Skills, each grounded in the existing DeskLine code:
 
-- *"Initialise the CometChat JS SDK using App ID and Region from env, and expose a `loginCometChat(uid, authToken)` helper the SPA calls after app login."*
-- *"Add a backend endpoint that mints a CometChat auth token server-side using the Auth Key; never send the Auth Key to the client."*
-- *"Given our `users` table, write an idempotent sync that creates a CometChat user per app user with UID = `users.id` and tags for role and department."*
-- *"On agent claiming a `conversation` ticket, open a 1:1 conversation between employee and agent and store the conversation id on the ticket."*
-- *"On escalation, add the supervisor to the existing conversation as a group, preserving message history."*
-- *"Create a `/webhooks/cometchat` handler that verifies the signature, logs every event to `webhook_event_logs`, and on `conversation.ended` marks the linked ticket resolved."*
-- *"Enable AI Moderation and route `message.flagged` events to an admin moderation queue."*
+- *"Initialise the CometChat JS SDK and UI Kit from `VITE_COMETCHAT_APP_ID` / `VITE_COMETCHAT_REGION`, log the user in with a backend-minted auth token, and register the FCM token for push."*
+- *"Add a backend endpoint that mints a per-user CometChat auth token using the REST API key; never send the key to the client."*
+- *"Given our `users` table, write an idempotent sync that creates a CometChat user per app user (UID = `users.id`) tagged `role:{role}` and `dept:{dept}`, with retry and 409-as-update."*
+- *"Model every ticket chat as a private group `ticket-{ticketId}` so escalation just adds the supervisor and preserves history."*
+- *"Create a `/webhooks/cometchat` handler that responds 200 immediately, logs every event to `webhook_event_logs` idempotently, and on `moderation_engine_blocked` creates a moderation-queue item and notifies admins."*
+- *"For Information tickets, have a CometChat AI-agent user answer in-chat and hand off to a human on request, keeping the transcript."* (`cometchat-calls` used similarly for the call buttons.)
 
-Workflow pattern: **scope the task → let the Skill generate against the real files → review the diff → adapt to DeskLine's module conventions (Zod validation, service layer, error envelope) → test.**
+Workflow pattern: **scope the task → let the Skill generate against the real files → review the diff → adapt to DeskLine's conventions (module/service split, Zod validation, `AppError` + `{ error: { code, message } }` envelope, Pino logging) → run the module's Vitest suite.**
 
 ---
 
 ## Problems solved with the Skills
 
-- **Identity mapping without drift** — the Skill defaulted to UID = app user id, eliminating a mapping table and matching our Step 1 `cometchat_uid` design.
-- **Keeping the Auth Key secret** — generated the server-side token endpoint rather than the tempting client-side shortcut.
-- **History-preserving escalation** — produced the 1:1→group migration path, the hardest single piece, using CometChat's group/import APIs instead of a lossy "new group" approach.
-- **Not breaking app notifications** — the push skill added CometChat push *alongside* the existing FCM funnel and kept the two event sources distinguishable, satisfying the core assignment constraint.
-- **Webhook boilerplate** — scaffolded the log-then-dispatch pipeline and signature verification so we focused on the ticket-state logic.
+- **Keeping keys server-side** — generated the token endpoint + REST client instead of the tempting client-side Auth Key shortcut.
+- **Identity without drift** — UID = app id fell straight out of our `users` table; no mapping layer.
+- **History-preserving escalation** — the groups-from-the-start model (rather than 1:1→migrate) came out of modelling every ticket as a group, making escalation a one-line "add member".
+- **Idempotent sync & webhooks** — retry/backoff, 409-as-update, and event-id de-duplication so re-seeds and CometChat re-deliveries are safe.
+- **Not breaking app notifications** — CometChat push was layered onto the existing FCM funnel with the two sources kept distinct.
 
 ---
 
 ## Limitations & manual changes required
 
-The generated code was a strong starting point but always needed adaptation:
-
-- **Module conventions** — generated handlers were rewritten to match DeskLine's service/controller split, Zod-validated boundaries, `AppError` + `{ error: { code, message } }` envelope, and Pino logging.
-- **RBAC alignment** — tag-based restrictions had to be reconciled with the app's own route-level RBAC so the two enforcement layers agree (chat can't allow what the API forbids).
-- **Idempotency** — sync and webhook handlers were hardened to be safely re-runnable (re-delivery, re-seed) beyond the first-pass generation.
-- **Migration edge cases** — the 1:1→group escalation needed manual handling for tickets that were already groups or already escalated.
-- **Env & secrets** — wiring App ID/Region/Auth Key/webhook secret into our existing env config and `.env.production.example` was done by hand to keep secrets server-side only.
+- **Conventions** — generated handlers were rewritten to DeskLine's service/controller split, Zod boundaries, error envelope, and logging.
+- **Webhook security** — the Skill scaffolded the handler; we chose **Basic Auth** at the edge (dashboard-configured) and left `COMETCHAT_WEBHOOK_SECRET` reserved for a future HMAC check rather than shipping an unverified signature path.
+- **Ticket ↔ conversation lookup** — real webhook payloads sent conversation ids in several shapes (`group_…`, raw, `receiver`); the lookup was hardened by hand to tolerate all of them.
+- **AI provider** — the in-chat AI reply reuses the backend LLM service (`generateTicketResponse`) rather than a CometChat-native bot, so answers share one code path with the Step 1 auto-reply.
+- **Graceful degradation** — login/register returning `cometchatAuthToken: null` on failure, and background sync on register, were added so CometChat outages never block core auth.
+- **a11y / i18n** — the `cometchat-a11y` and `cometchat-i18n` skills guided UI adjustments but still needed manual wiring into our component structure.
 
 ---
 
 ## Learnings
 
-- CometChat Skills are most effective when the **existing schema and module structure are given as context** — the UID and tag design fell out naturally from our `users` table.
-- Treat generated code as a **reviewed draft**: it accelerates the 80% of boilerplate (SDK init, webhook plumbing, sync) so effort goes to the 20% that's domain-specific (escalation ownership, resolution flow).
-- The biggest risk in a "add chat to an existing app" task is **regression**, not new features — the Skills helped keep CometChat additive (coexisting push, preserved app notifications), which is exactly what the assignment weights.
+- Skills are most effective when the **existing schema and module layout are given as context** — the UID and tag design, and the group-per-ticket model, followed directly from our data model.
+- Treat generated code as a **reviewed draft**: it accelerates boilerplate (SDK init, REST client, webhook plumbing, sync) so effort concentrates on the domain-specific 20% (escalation ownership, resolution lifecycle, moderation actions).
+- In an "add chat to an existing app" task, the dominant risk is **regression**, not missing features — the Skills helped keep CometChat additive (coexisting push, preserved app notifications, graceful degradation), which is exactly what the assignment weights.
 
 ---
 
 ## Before / after examples
 
-**Before (Step 1)** — ticket page chat placeholder:
+**Before (Step 1)** — ticket chat is a placeholder; messaging is DB comments:
 ```tsx
-// web/src/components/tickets/ChatPlaceholder.tsx
-// Static "Chat available in Step 2" panel; comments handled via /api/tickets/:id/comments
+// web/src/components/tickets/ChatPlaceholder.tsx  → "Chat available in Step 2"
+// Comments via POST /api/tickets/:id/comments
 ```
-
-**After (Step 2)** — live CometChat conversation mounted on the ticket:
+**After (Step 2)** — live CometChat group mounted on the ticket:
 ```tsx
-// Ticket detail renders the CometChat UI Kit conversation for tickets[cometchat_convo_id],
-// with real-time delivery, typing indicators, and presence.
+// web/src/pages/shared/TicketDetailPage.tsx → <TicketChatSection> when ticket.cometchatConvoId exists
+// CometChatMessageList + MessageComposer + MessageHeader + participants sidebar (live presence)
 ```
 
-**Before** — Information ticket AI reply (Step 1, simulated):
-```
-Gemini (or mock) reply stored as a ticket_comments row (is_ai = true).
-```
-**After** — same seam, upgraded to CometChat AI Agent / AgentKit for richer, in-chat responses.
+**Before** — Information-ticket AI reply is a one-shot comment (Step 1, Gemini/mock). **After** — a CometChat **AI-agent user** answers in-chat and hands off to a human, preserving history (`cometchat-ai.service.ts`).
 
-**Before** — no server knowledge of chat events. **After** — `message.sent` / `conversation.ended` / `message.flagged` webhooks drive activity logs, ticket resolution, and the moderation queue ([COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md)).
+**Before** — the backend has no knowledge of chat events. **After** — `message_sent` / `moderation_engine_blocked` / `call_ended` webhooks drive activity logs, the moderation queue, and call records ([COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md)).
+
+**Before** — no real-time calling. **After** — `cometchat-calls` wired the Calls SDK and `CometChatCallButtons` into the chat header.
 
 ---
 
 ## Related docs
-- [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) — the integration design the Skills implemented
+- [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) — the integration the Skills implemented
 - [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md) — webhook flow
 - [DECISION_LOG.md](DECISION_LOG.md#step-2--cometchat-integration) — decisions & alternatives

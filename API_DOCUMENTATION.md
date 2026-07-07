@@ -321,13 +321,16 @@ Personal agent performance: `{ assigned, resolved, escalated, inProgress, resolu
 
 ---
 
-## Step 2 — CometChat endpoints (planned)
+## Step 2 — CometChat endpoints
 
-Added on the `cometchat-integration` branch (see [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md)):
+Implemented on the `cometchat-integration` branch (see [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md)). Router mounts in `backend/src/app.ts`.
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/cometchat/auth-token` | Generate a CometChat auth token server-side (Auth Key never leaves the server) |
-| POST | `/webhooks/cometchat` | Receive & process CometChat webhook events |
-| GET | `/api/admin/moderation` | AI-flagged messages queue |
-| POST | `/api/admin/moderation/:id/action` | Dismiss / block sender |
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/cometchat/auth-token` | authenticated | Mint a per-user CometChat auth token server-side (syncs the user first if needed). → `{ "cometchatAuthToken": "…", "authToken": "…" }`. REST/Auth key never leaves the server. |
+| POST | `/webhooks/cometchat` | Basic Auth (edge) | Receive CometChat events; responds `200` immediately and processes async. Handles `message_sent`, `moderation_engine_blocked`, `call_ended`/`meeting_ended`. |
+| GET | `/api/admin/moderation` | admin | Paginated `pending` moderation queue. Query: `page`, `limit`. |
+| POST | `/api/admin/moderation/:id/action` | admin | Body `{ "action": "dismiss" \| "block" }` — dismiss, or block (deletes the sender's CometChat account). |
+| POST | `/api/admin/webhooks/:id/retry` | admin | Re-process a `failed` webhook event. |
+
+**Auth-flow change (Step 2):** `POST /api/auth/login` and `POST /api/auth/register` responses gain a `cometchatAuthToken` field (string, or `null` if CometChat token generation fails — app auth still succeeds). All other Step 1 endpoints are unchanged.

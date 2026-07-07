@@ -313,7 +313,7 @@ Parameterize seed volume and add seeded chat transcripts once CometChat is wired
 
 # Step 2 — CometChat Integration
 
-> These decisions capture the **planned** CometChat integration approach per [SCOPE_OF_WORK.md](SCOPE_OF_WORK.md) and are implemented on the `cometchat-integration` branch. See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md), [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md), and [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md).
+> These decisions capture the CometChat integration **as implemented** on the `cometchat-integration` branch. See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md), [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md), and [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md).
 
 ## Decision 13: CometChat Integration Approach & UID Strategy
 
@@ -326,13 +326,13 @@ Integrate CometChat as an **additive layer** on top of the existing app. Every a
 3. Client-side auth-key usage (fast but insecure)
 
 ### Why This Was Chosen
-UID = app user ID means **no mapping table and no identity drift** — any place the app knows a user, it knows their CometChat identity. Server-side token generation keeps the Auth Key secret, satisfying the "never exposed to the client" acceptance criterion. Users never see a separate CometChat login.
+UID = app user ID means **no mapping table and no identity drift** — any place the app knows a user, it knows their CometChat identity. Server-side token generation (`cometchat-auth.service.ts` → `POST /api/cometchat/auth-token`) keeps the REST API key secret, satisfying the "never exposed to the client" acceptance criterion. Users never see a separate CometChat login — `loginUser()`/`registerUser()` return a `cometchatAuthToken` inline, and the token generation is **graceful**: on failure the field is `null` and app auth still succeeds.
 
 ### Trade-offs
-UIDs are UUIDs rather than human-readable, but that never surfaces in the UI.
+UIDs are UUIDs rather than human-readable, but that never surfaces in the UI. Inlining the token into the auth response couples the two, mitigated by the null-on-failure fallback.
 
 ### Limitations / Assumptions
-CometChat App ID/Region/Auth Key are server env vars only.
+CometChat App ID/Region/REST API Key are server env vars only; the client receives only per-user auth tokens.
 
 ### Future Improvements
 Cache issued tokens with TTL to cut round-trips.
@@ -350,13 +350,13 @@ Cache issued tokens with TTL to cut round-trips.
 3. Manual CometChat dashboard entry
 
 ### Why This Was Chosen
-Seeded users must be chat-ready immediately for demos, so a bulk import handles the back-catalogue while an inline hook on `register` handles the steady state. This guarantees identity consistency without a separate CometChat signup.
+Seeded users must be chat-ready immediately for demos, so `batchSyncUsers()` (list-then-create/update, paginated) handles the back-catalogue while `syncNewUser()` — run in the **background** on `register` — handles the steady state without blocking signup. Both are idempotent (retry with backoff; `409 Conflict` → update), so re-seeds never trip the user limit or duplicate. `cometchat_uid` is written back to the DB on success; `retryPendingSync()` sweeps stragglers.
 
 ### Trade-offs
 Two code paths (bulk + inline), but each is simple and idempotent.
 
 ### Limitations / Assumptions
-Deactivated app users are deactivated in CometChat; deletion is soft.
+Deactivated/blocked app users are deleted from CometChat (moderation `blockSender`); role/department changes re-tag via `updateUserTags()`.
 
 ---
 
@@ -378,44 +378,69 @@ Tag updates must track role/department changes (handled in the profile-update sy
 
 ---
 
-## Decision 16: 1:1 → Group Chat & Agent Flow
+## Decision 16: Chat model — groups, not 1:1
 
 ### Selected Approach
-A ticket chat **starts 1:1** (employee ↔ agent) when an agent claims a Conversation sub-type ticket. On escalation, the supervisor is **added to the existing conversation to form a 3-way group, preserving history** (via the Data Import/group migration path). Agent inbox surfaces active conversations with availability.
+**Every** ticket conversation is a **private CometChat group** named `ticket-{ticketId}` — including plain employee↔agent chats (`cometchat-chat.service.ts`). Escalation, AI→human handoff, and supervisor join all just **add a member** to that existing group. The group GUID is stored on `tickets.cometchat_convo_id`; the agent inbox lists active conversations with availability.
 
 ### Alternate Options Considered
-1. Always-group from the start
+1. **Start 1:1, migrate to a group on escalation** (the intuitive approach)
 2. New separate group on escalation (loses history)
 3. Per-message forwarding
 
 ### Why This Was Chosen
-Most ticket chats never escalate, so starting 1:1 keeps them clean; migrating to a group **with history intact** on escalation matches the escalation-ownership rule without losing context. See the related note in project memory on the 1:1 → group transition.
+Modelling everything as a group gives **one consistent render path** on web and mobile and makes escalation/handoff a trivial "add member" that **preserves all history** — no 1:1→group migration to get wrong. The initial intuition (start 1:1, migrate later) was rejected because the migration is the fragile part; groups-from-the-start removes it entirely.
 
 ### Trade-offs
-The 1:1→group migration is the trickiest part of the integration; it's isolated behind the escalation handler.
+A two-person chat is technically a group of two, which is a hair less "native" than a true 1:1 conversation — invisible to users, and worth it for the uniform model.
+
+### Limitations / Assumptions
+Chat lifecycle follows ticket status (`onTicketStatusChange`): closed → end conversation, resolved → keep (24h window), reopened → reactivate with a system message.
 
 ---
 
 ## Decision 17: CometChat Push, Moderation & Webhooks
 
 ### Selected Approach
-- **Push:** CometChat push (message/call alerts) coexists with the existing FCM app-notification funnel; notification handling distinguishes app events from CometChat events.
-- **Moderation:** CometChat AI Moderation auto-flags profanity/images; flagged messages surface only in the Admin moderation queue.
-- **Webhooks:** A secured `/webhooks/cometchat` endpoint logs events to `webhook_event_logs` and reacts — `message.sent` → activity log, `conversation.ended` → mark ticket resolved, `message.flagged` → notify admin.
+- **Push:** CometChat push (message/call alerts) coexists with the existing FCM app-notification funnel; the client distinguishes app events from CometChat events by source.
+- **Moderation:** CometChat AI Moderation flags messages; the `moderation_engine_blocked` webhook stores a `ModerationQueueItem` (`moderation_queue`) and notifies admins (`cometchat` type). Admins dismiss or **block** (which deletes the sender's CometChat account).
+- **Webhooks:** `POST /webhooks/cometchat` responds `200` immediately, logs every event to `webhook_event_logs` idempotently, then reacts — `message_sent` → activity log + AI reply on Information tickets, `moderation_engine_blocked` → moderation queue, `call_ended`/`meeting_ended` → call activity. Admin retry via `POST /api/admin/webhooks/:id/retry`.
 
 ### Alternate Options Considered
 1. Replacing app push with CometChat push entirely (rejected — must keep app notifications working)
 2. A human-moderator role (replaced by AI Moderation)
 3. Polling CometChat instead of webhooks
+4. **HMAC-signature** webhook verification (vs the Basic Auth actually used)
 
 ### Why This Was Chosen
-This keeps the assignment's central constraint — **existing workflows must keep working** — front and centre: CometChat is added alongside, not on top of, the app's own notifications. Webhooks let chat events drive ticket state server-side, which is the real-world integration the assignment asks to demonstrate.
+This keeps the assignment's central constraint — **existing workflows must keep working** — front and centre: CometChat is added alongside, not on top of, the app's own notifications. Webhooks let chat events drive ticket state server-side. Webhook auth uses **HTTP Basic Auth** configured at the CometChat dashboard / proxy edge (simple, no shared-secret signing code to get wrong); `COMETCHAT_WEBHOOK_SECRET` is reserved for a future HMAC upgrade.
 
 ### Trade-offs
-Two notification systems coexist; the code path is clearly labelled by source to avoid confusion.
+Two notification systems coexist; the code path is labelled by source to avoid confusion. Basic Auth is coarser than a per-request signature, mitigated by TLS + edge verification and idempotent processing.
 
 ### Limitations / Assumptions
-At least four webhook events processed and visible in the admin log; flagged messages appear in the queue within ~10s.
+Webhook processing is idempotent (dedupe by derived event id); flagged messages appear in the admin queue promptly after the `moderation_engine_blocked` event.
+
+---
+
+## Decision 18: CometChat Skills
+
+### Selected Approach
+Use pinned **CometChat Skills** (`skills-lock.json`, hash-verified from `cometchat/cometchat-skills`) — `cometchat`, `cometchat-calls`, `cometchat-a11y`, `cometchat-i18n` — to scaffold the integration, then review and adapt every diff to DeskLine conventions.
+
+### Alternate Options Considered
+1. Hand-write the entire integration from the CometChat docs
+2. Copy sample apps
+3. Unpinned/latest skills
+
+### Why This Was Chosen
+The Skills accelerate the boilerplate (SDK init, REST client, sync, webhook plumbing, calls) so effort concentrates on domain logic (escalation ownership, resolution lifecycle, moderation actions). Pinning by hash makes the exact revision reproducible. See [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md).
+
+### Trade-offs
+Generated code is a draft, not final — it needed rewriting to our module/service split, Zod boundaries, and error envelope.
+
+### Limitations / Assumptions
+Skills are external references, so their revision is captured in `skills-lock.json` rather than vendored into the repo.
 
 ### Future Improvements
 Signed-webhook verification hardening and replay protection.

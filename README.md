@@ -2,7 +2,7 @@
 
 > **Internal support ticketing system for small SaaS companies.** Employees raise tickets for IT, HR, or general issues; support agents resolve them; supervisors handle escalations; admins manage users, view logs, and moderate. Ships as a **React web app** and a **Flutter mobile app**, both backed by a single **Express + Prisma + PostgreSQL** API.
 
-This repository is the **Step 1 production-ready application** — a complete, self-contained support platform built **before** CometChat is integrated. The CometChat integration (Step 2) lands on the `cometchat-integration` branch; see the [CometChat docs](#documentation) for the plan.
+This `main` / `production-ready-app` branch is the **Step 1 production-ready application** — a complete, self-contained support platform built **before** CometChat. The **Step 2 CometChat integration is implemented on the `cometchat-integration` branch**; the CometChat docs here describe that real implementation so this branch carries full documentation coverage. See the [CometChat docs](#documentation).
 
 ---
 
@@ -19,9 +19,9 @@ This repository is the **Step 1 production-ready application** — a complete, s
 | [DEMO_GUIDE.md](DEMO_GUIDE.md) | Step-by-step reproducible demo script with seeded credentials |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Staging deployment (Docker Compose → nginx → ALB) |
 | [SCHEMA.md](SCHEMA.md) | Authoritative Prisma schema reference |
-| [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) | **Step 2** — CometChat integration plan (user sync, chat, tags, RBAC, push) |
-| [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md) | **Step 2** — CometChat webhook use cases and processing |
-| [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md) | **Step 2** — how CometChat Skills were used during integration |
+| [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) | **Step 2** — CometChat integration as built (user sync, group chat, tags/RBAC, AI agent, moderation, calling, push) |
+| [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md) | **Step 2** — CometChat webhook endpoint, security, events, admin log |
+| [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md) | **Step 2** — which CometChat Skills were used and how |
 
 ---
 
@@ -173,7 +173,7 @@ flutter run                   # point the API base URL at your backend
 
 `VITE_API_URL` (empty = same-origin `/api/*`), `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_VAPID_KEY` (web push).
 
-> **Secrets never reach the client.** CometChat App ID/Region/Auth Key (Step 2) and all Firebase server credentials live in the backend environment only.
+> **Secrets never reach the client.** The CometChat REST API Key (Step 2) and all Firebase server credentials live in the backend environment only; the browser/app receive only a per-user CometChat auth token minted by the backend. Only the public `COMETCHAT_APP_ID` / `COMETCHAT_REGION` are exposed (as `VITE_COMETCHAT_*`).
 
 See [.env.production.example](.env.production.example) for the full staging template and [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment.
 

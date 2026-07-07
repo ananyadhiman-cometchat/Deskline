@@ -125,6 +125,19 @@ Reproduce the flows from [DEMO_GUIDE.md](DEMO_GUIDE.md), verifying each acceptan
 - AI auto-reply quality is intentionally shallow (proves the flow, not answer quality).
 - Email is stored but not verified.
 
-## Step 2 additions
+## Step 2 additions (CometChat branch)
 
-CometChat testing (real-time delivery, presence, typing, moderation flagging within ~10s, ≥4 webhook events visible in the admin log) is covered in [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md). The key regression check: **re-run the entire manual QA checklist above after integration** to confirm existing app workflows still pass.
+The `cometchat-integration` branch adds a real Vitest suite around the integration (`backend/src/modules/cometchat/__tests__/` + an auth integration test), all mocking the CometChat REST client so they run offline:
+
+| Test file | Covers |
+|---|---|
+| `cometchat-auth.service.test.ts` | `generateToken()` / `ensureUserAndGenerateToken()` — token minting + sync-if-needed |
+| `cometchat-sync.service.test.ts` | `syncNewUser`, `batchSyncUsers`, `updateUserTags`, `retryPendingSync` — idempotent sync, 409-as-update |
+| `cometchat-lifecycle.service.test.ts` | `endConversation`, `reactivateConversation`, `onTicketStatusChange` — chat lifecycle vs ticket status |
+| `cometchat-ai.service.test.ts` | `createAIAgentConversation`, `handleHumanHelpRequest` — AI conversation + human handoff |
+| `cometchat.controller.test.ts` | `getAuthTokenController` — `/api/cometchat/auth-token` returns `{ cometchatAuthToken }` |
+| `auth/__tests__/auth-cometchat-integration.test.ts` | login/register return `cometchatAuthToken`; **null on CometChat failure (graceful degradation)**; response never leaks REST/Auth keys |
+
+Manual CometChat QA (real-time delivery, presence, typing, moderation flagging → admin queue, webhook events visible in the admin log, calling) is covered in [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md).
+
+**The key regression check:** re-run the entire manual QA checklist above after integration to confirm existing app workflows (auth, tickets, notifications) still pass — the graceful-degradation design means they should, even if CometChat is down.

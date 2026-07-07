@@ -79,12 +79,14 @@ Seed volume: **105 users** (5 admin / 10 supervisor / 20 agent / 70 employee) an
 
 > Runs on the `cometchat-integration` branch. See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md).
 
-9. Agent claims a **Conversation** ticket → a **1:1 CometChat chat auto-opens** on the ticket page.
+9. Agent claims a **Conversation** ticket → a **CometChat group chat** (`ticket-{id}`) opens on the ticket page with a live participants sidebar.
 10. Employee and agent **chat in real time** (two windows side by side) — live delivery, **typing indicator**, and **online/offline presence**, no refresh.
-11. Agent **escalates** → the supervisor is added to the existing conversation, forming a **3-way group chat with history preserved**.
-12. Employee sends a **banned word** → **AI Moderation** flags/blocks it.
-13. Admin reviews the flagged message in the **Moderation Queue** and dismisses it.
-14. Show **CometChat push** (message/call alert) arriving alongside the existing app notifications — proving both coexist.
+11. Agent **escalates** → the supervisor is **added to the same group**, so it becomes a 3-way chat **with all history preserved** (no migration).
+12. Raise an **Information** ticket → an **AI-agent user** greets in-chat and answers; ask for a human → the agent is added to the same group, inheriting the transcript.
+13. Employee sends a **banned word** → **AI Moderation** blocks it → the `moderation_engine_blocked` webhook queues it and **notifies admins**.
+14. Admin reviews the flagged message in the **Moderation Queue** → **dismiss** or **block sender**.
+15. Start a **voice/video call** from the chat header (Calls SDK).
+16. Show **CometChat push** (message/call alert) arriving alongside the existing app notifications — proving both coexist.
 
 ---
 
@@ -92,16 +94,16 @@ Seed volume: **105 users** (5 admin / 10 supervisor / 20 agent / 70 employee) an
 
 > See [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md).
 
-15. A ticket chat ends → the **`conversation.ended`** webhook fires → the ticket is auto-marked **Resolved**.
-16. Admin opens the **Webhook Event Log** → the live events from the demo (`message.sent`, `message.flagged`, `conversation.ended`, …) are visible with status.
-17. Admin opens the **Moderation Log** → the flagged message record with the action taken.
+17. Send messages / end a call during the demo → `message_sent` and `call_ended`/`meeting_ended` webhooks fire → activity is logged and `last_activity_at` bumped.
+18. Admin opens the **Webhook Event Log** (`webhook_event_logs`) → the live demo events (`message_sent`, `moderation_engine_blocked`, `call_ended`, …) are visible with `processed` status; a `failed` one can be retried.
+19. Admin opens the **Moderation Queue** → the flagged message record with the action taken.
 
 ---
 
 ## Wrap-up talking points
 
 - **What was built before CometChat** — full ticketing platform: auth + RBAC, four roles, ticket routing, resolution flow, admin dashboard, app push notifications, 105 seeded users.
-- **What changed after CometChat** — real-time 1:1 and group chat, presence/typing, agent chat, AI moderation, and webhook-driven ticket updates — **added without breaking existing workflows**.
+- **What changed after CometChat** — real-time group chat (with escalation add-member), presence/typing, an in-chat AI agent, agent inbox, voice/video calling, AI moderation, and webhook-driven activity — **added without breaking existing workflows** (graceful degradation if CometChat is down).
 - **How CometChat Skills were used** — see [COMETCHAT_SKILLS_USAGE.md](COMETCHAT_SKILLS_USAGE.md).
 - **Key decisions & alternatives** — see [DECISION_LOG.md](DECISION_LOG.md).
 

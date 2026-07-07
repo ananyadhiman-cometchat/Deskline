@@ -191,11 +191,48 @@ See [DEMO_GUIDE.md](DEMO_GUIDE.md) for credentials and [TESTING_NOTES.md](TESTIN
 
 ---
 
-## Step 2 additions (planned)
+## Step 2 additions (CometChat)
 
-Two models are specified for the CometChat integration and are added on the `cometchat-integration` branch (see [SCHEMA.md](SCHEMA.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md)):
+The `cometchat-integration` branch adds **two models** and **three enums** in migration `20260618115417_add_cometchat_tables`. No changes were needed to the core tables — `users.cometchat_uid` and `tickets.cometchat_convo_id` already exist in the Step 1 schema, so the mapping needed no later migration to core tables. See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md).
 
-- **`webhook_event_logs`** — `event_type`, `payload` (JSONB), `status` (`received`/`processed`/`failed`), `error_message`, `processed_at`, `created_at`.
-- **`moderation_flags`** — AI-flagged messages surfaced in the admin moderation queue.
+### `webhook_event_logs` (`WebhookEventLog`)
+Idempotent log of every CometChat webhook event.
 
-The `users.cometchat_uid` and `tickets.cometchat_convo_id` columns already exist in the Step 1 schema to hold the mapping without a later migration to core tables.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID | PK |
+| `event_type` | text | the CometChat `trigger` (e.g. `message_sent`) |
+| `payload` | JSONB | full raw payload |
+| `status` | enum `WebhookStatus` | `received` / `processed` / `failed` |
+| `error_message` | text? | set when `failed` |
+| `processed_at` | timestamp? | |
+| `created_at` | timestamp | |
+
+Indexes: `event_type`, `status`, `created_at`.
+
+### `moderation_queue` (`ModerationQueueItem`)
+AI-flagged messages surfaced in the admin moderation queue.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID | PK |
+| `message_id` | text | flagged CometChat message id |
+| `conversation_id` | text | conversation/group the message was in |
+| `ticket_id` | text? | linked ticket, if resolved |
+| `sender_uid` / `sender_name` | text | who sent it |
+| `message_content` | text | the flagged content |
+| `flag_reason` | text | moderation rule that fired |
+| `flagged_at` | timestamp | |
+| `status` | enum `ModerationStatus` | `pending` / `dismissed` / `blocked` (default `pending`) |
+| `reviewed_by` / `reviewed_at` | text? / timestamp? | admin who actioned it |
+| `action` | enum `ModerationAction`? | `dismiss` / `block_sender` |
+| `created_at` | timestamp | |
+
+Indexes: `status`, `flagged_at`.
+
+### New enums
+- `WebhookStatus` — `received`, `processed`, `failed`
+- `ModerationStatus` — `pending`, `dismissed`, `blocked`
+- `ModerationAction` — `dismiss`, `block_sender`
+
+The `NotificationType.cometchat` value (present since Step 1) is now actively used — moderation alerts to admins are `cometchat`-type notifications.

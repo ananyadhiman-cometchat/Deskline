@@ -121,14 +121,17 @@ When an `information` ticket is created, the AI answer is stored as a `ticket_co
 
 ---
 
-## Step 2 — CometChat-originated notifications (planned)
+## Step 2 — CometChat-originated notifications
 
-Added on the `cometchat-integration` branch, these **coexist** with the app funnel above (they do not replace it):
+Implemented on the `cometchat-integration` branch, these **coexist** with the app funnel above (they do not replace it):
 
-| Trigger | Recipient | Channel |
+| Trigger | Recipient | Channel / mechanism |
 |---|---|---|
-| New chat message (recipient offline) | Recipient | CometChat push (FCM/APNs) |
-| Incoming / missed call | Callee | CometChat push + in-app banner |
-| Message auto-flagged by moderation | Admin | In-app notification (`cometchat` type) |
+| New chat message (recipient offline) | Recipient | CometChat push (FCM/APNs), registered by `CometChatProvider` |
+| Incoming message / call while online | Recipient | In-app toast via the provider's global message/call listener |
+| Incoming / missed call | Callee | CometChat push |
+| Message flagged by AI Moderation (`moderation_engine_blocked` webhook) | All active admins | **App funnel**, `cometchat`-type notification ("Message Flagged — a message from *{sender}* was blocked: *{reason}*") |
 
-The client distinguishes **app events** (this document) from **CometChat events** by source so both streams display correctly. The Step 1 acceptance criterion — *existing app notifications continue working after CometChat integration* — is verified by re-running the triggers in the table above post-integration. See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md).
+The last row is the one place CometChat feeds the **existing `createNotification()` funnel** — so the `cometchat` `NotificationType` (reserved in Step 1) is now actively used, and moderation alerts appear in the same notification centre and admin notification log as every app notification. Message/call push is handled by CometChat directly, distinguished from app events by source.
+
+The Step 1 acceptance criterion — *existing app notifications continue working after CometChat integration* — is verified by re-running the [triggers table](#triggers-across-the-ticket-lifecycle) post-integration (the integration is designed to degrade gracefully, so a CometChat outage never blocks the app funnel). See [COMETCHAT_INTEGRATION.md](COMETCHAT_INTEGRATION.md) and [COMETCHAT_WEBHOOKS.md](COMETCHAT_WEBHOOKS.md).
